@@ -9,7 +9,7 @@ interface UseTicTacToeGameReturn
 }
 
 // --- Custom Hook for Game Logic ---
-export function useTicTacToeGame1(): UseTicTacToeGameReturn
+export function useTicTacToeGame(): UseTicTacToeGameReturn
 {
     // Use useRef to keep the same game instance across renders without causing re-renders on change
     const gameRef = useRef<TicTacToeGame>(new TicTacToeGame());

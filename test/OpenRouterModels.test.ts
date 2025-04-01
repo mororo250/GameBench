@@ -1,5 +1,5 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
-import {ensureModelsFetched, getCachedModels, ModelInfo, resetModelsCacheForTesting} from '../src/lib/OpenRouterModels1'; // Import the reset function
+import {ensureModelsFetched, getCachedModels, ModelInfo, resetModelsCacheForTesting} from '../src/lib/OpenRouterModels'; // Import the reset function
 
 // Mock the global fetch function
 const mockFetch = vi.fn();
@@ -76,7 +76,6 @@ const expectedModelInfo: Map<string, ModelInfo> = new Map([['openai/o1-mini', {
     promptMTokenCost: 0,
     completionMTokenCost: 0,
 },],]);
-
 
 describe('OpenRouter Models Cache', () =>
 {

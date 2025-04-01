@@ -1,8 +1,8 @@
 import OpenAI from 'openai';
 import {ChatCompletion, ChatCompletionMessageParam} from 'openai/resources/chat/completions';
-import {ensureModelsFetched, getCachedModels, ModelInfo} from './OpenRouterModels1'; // Import from the new file
+import {ensureModelsFetched, getCachedModels, ModelInfo} from './OpenRouterModels'; // Import from the new file
 
-// This allow other models to use the same cache without needing to import from OpenRouterModels1.ts
+// This allow other models to use the same cache without needing to import from OpenRouterModels.ts
 export {getCachedModels};
 
 interface ChatMessage

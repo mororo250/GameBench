@@ -2,9 +2,9 @@
 
 import React, {ChangeEvent, ReactElement, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {BoardState, GameState, getPlayerSymbol, Player} from '../lib/TicTacToe';
-import {ensureModelsFetched, getCachedModels, ModelInfo} from '../lib/OpenrouterModels1';
-import {OpenRouterClient} from '../lib/Openrouter1';
-import {useTicTacToeGame} from '../hooks/UseTicTacToeGame';
+import {ensureModelsFetched, getCachedModels, ModelInfo} from '../lib/OpenRouterModels1';
+import {OpenRouterClient} from '../lib/Openrouter';
+import {useTicTacToeGame1} from '../hooks/UseTicTacToeGame1';
 import {Board} from './Board';
 import {LlmChat} from './LlmChat';
 import {PlayerChat} from './PlayerChat';
@@ -31,7 +31,7 @@ export default function Game(): ReactElement
     // --- Game Logic Hook ---
     const {
         gameInstance, handleSquareClick, handleRestart,
-    } = useTicTacToeGame();
+    } = useTicTacToeGame1();
 
     // --- Derive State from Instance ---
     const currentBoardState: Readonly<BoardState> = gameInstance.getBoardState();

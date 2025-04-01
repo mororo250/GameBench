@@ -1,5 +1,5 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
-import {ensureModelsFetched, getCachedModels, ModelInfo, resetModelsCacheForTesting} from '../src/lib/OpenrouterModels1'; // Import the reset function
+import {ensureModelsFetched, getCachedModels, ModelInfo, resetModelsCacheForTesting} from '../src/lib/OpenRouterModels1'; // Import the reset function
 
 // Mock the global fetch function
 const mockFetch = vi.fn();

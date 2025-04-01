@@ -1,233 +1,110 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Player, GameState, SquareValue, BoardState, TicTacToeGame } from '../lib/tic-tac-toe'; // Import the class and types
-import { ensureModelsFetched, getCachedModels, ModelInfo } from '../lib/openrouterModels'; // Import model functions and type
-import styles from './TicTacToe.module.css'; // Import CSS Module
-
-// --- Custom Hook for Game Logic using the TicTacToeGame class ---
-function useTicTacToeGame() {
-  const game = useMemo(() => new TicTacToeGame(), []);
-  const [updateTrigger, setUpdateTrigger] = useState(0);
-
-  const forceUpdate = useCallback(() => {
-    setUpdateTrigger(prev => prev + 1); // Increment to force re-render
-  }, []);
-
-  const handleSquareClick = useCallback((index: number) => {
-    try {
-      game.makeMove(index);
-      forceUpdate(); // Re-render after successful move
-    } catch (error) {
-      console.error("Invalid move:", error);
-      // Optionally, provide feedback to the user here if needed
-    }
-  }, [game, forceUpdate]);
-
-  const handleRestart = useCallback(() => {
-    game.resetGame();
-    forceUpdate(); // Re-render after reset
-  }, [game, forceUpdate]);
-
-  // Derive status from the game instance's state
-  let status;
-  const currentGameState = game.gameState; // Access state from the instance
-  const nextPlayer = game.nextPlayer;
-
-  switch (currentGameState) {
-    case GameState.Draw:
-      status = 'Game is a Draw';
-      break;
-    case GameState.XWins:
-      status = 'Winner: X';
-      break;
-    case GameState.OWins:
-      status = 'Winner: O';
-      break;
-    default: // GameState.Ongoing
-      status = 'Next player: ' + (nextPlayer === Player.X ? 'X' : 'O');
-  }
-
-  // Return the game instance's state and handlers
-  return {
-    gameInstance: game, // Expose the instance if needed elsewhere
-    boardState: game.board, // Get board directly from instance
-    gameState: currentGameState,
-    status,
-    xIsNext: nextPlayer === Player.X, // Derive xIsNext from game instance
-    handleSquareClick,
-    handleRestart,
-  };
-}
-
-// --- UI Components ---
-
-// Read-only LLM Chat
-function LlmChat({ messages }: { messages: string[] }) {
-  const chatEndRef = React.useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  return (
-    <div className={styles.chatContainer}>
-      <h2>LLM Thoughts</h2>
-      <div className={`${styles.chatBox} ${styles.readOnlyChatBox}`}> {/* Add readOnly class */}
-        {messages.map((msg, index) => (
-          <p key={index} className={styles.chatMessage}>{msg}</p>
-        ))}
-        <div ref={chatEndRef} />
-      </div>
-      {/* No input form for LLM chat */}
-    </div>
-  );
-}
-
-// Player Input Game Chat
-function PlayerChat({ gameState, xIsNext, onMoveSubmit, onRestart }: {
-  gameState: GameState;
-  xIsNext: boolean;
-  onMoveSubmit: (index: number) => void;
-  onRestart: () => void; // Keep restart separate for now
-}) {
-  const [chatMessages, setChatMessages] = useState<string[]>([]);
-  const [inputValue, setInputValue] = useState('');
-  const chatEndRef = React.useRef<HTMLDivElement>(null); // Ref to scroll chat
-
-  // Effect to initialize/reset chat on restart
-  // We need a way to trigger this externally when the main restart happens
-  useEffect(() => {
-     setChatMessages(['System: Game started! Player X, enter a number (1-9) to make your move.']);
-     setInputValue('');
-  }, [onRestart]); // Relying on parent's restart logic
-
-  // Effect to scroll chat to bottom
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatMessages]);
-
-  const handleInternalChatSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-    const moveInput = inputValue.trim();
-    const move = parseInt(moveInput, 10);
-    const currentPlayerSymbol = xIsNext ? 'X' : 'O';
-
-    if (!moveInput) return;
-
-    let newMessages = [...chatMessages, `Player ${currentPlayerSymbol}: ${moveInput}`];
-
-    if (gameState !== GameState.Ongoing) {
-      newMessages.push(`System: Game is already over. Please restart.`);
-    } else if (isNaN(move) || move < 1 || move > 9) {
-      newMessages.push(`System: Invalid input. Please enter a number between 1 and 9.`);
-    } else {
-      const index = move - 1;
-      try {
-          onMoveSubmit(index); // Call parent handler
-          // Success message could be added, but board update is primary feedback
-      } catch (error: any) {
-          newMessages.push(`System: Error - ${error.message}`); // Show validation errors from game logic
-      }
-    }
-
-    setChatMessages(newMessages);
-    setInputValue('');
-  };
-
-  return (
-     <div className={styles.chatContainer}>
-        <h2>Player Chat</h2>
-        <div className={styles.chatBox}>
-          {chatMessages.map((msg, index) => (
-            <p key={index} className={styles.chatMessage}>{msg}</p>
-          ))}
-          <div ref={chatEndRef} /> {/* Element to scroll to */}
-        </div>
-        <form onSubmit={handleInternalChatSubmit} className={styles.chatForm}>
-          <input
-            type="text"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Enter move (1-9)"
-            className={styles.chatInput}
-            disabled={gameState !== GameState.Ongoing} // Disable input when game is over
-          />
-          <button type="submit" className={styles.chatButton} disabled={gameState !== GameState.Ongoing}>Send</button>
-        </form>
-        {/* Restart button moved to center column */}
-      </div>
-  );
-}
-
-
-// Helper function to display player symbol
-function getPlayerSymbol(player: Player | null): string {
-  if (player === Player.X) return 'X';
-  if (player === Player.O) return 'O';
-  return '';
-}
-
-// Square component
-function Square({ value, onSquareClick }: { value: SquareValue, onSquareClick: () => void }) {
-  return (
-    <button className={styles.square} onClick={onSquareClick}>
-      {getPlayerSymbol(value)}
-    </button>
-  );
-}
-
-// Board component
-function Board({ squares, onSquareClick }: { squares: BoardState, onSquareClick: (index: number) => void }) {
-  const boardRows = [];
-  for (let row = 0; row < 3; row++) {
-    const squaresInRow = [];
-    for (let col = 0; col < 3; col++) {
-      const index = row * 3 + col;
-      squaresInRow.push(
-        <Square
-          key={index}
-          value={squares[index]}
-          onSquareClick={() => onSquareClick(index)} // Pass index to handler
-        />
-      );
-    }
-    boardRows.push(
-      <div key={row} className={styles.boardRow}>
-        {squaresInRow}
-      </div>
-    );
-  }
-
-  return (
-    <div className={styles.board}>
-      {boardRows}
-    </div>
-  );
-}
-
+import React, { useState, useEffect, useCallback, useMemo, useRef, ReactElement, ChangeEvent } from 'react';
+import { Player, GameState, TicTacToeGame, getPlayerSymbol, BoardState } from '../lib/tic-tac-toe';
+import { ensureModelsFetched, getCachedModels, ModelInfo } from '../lib/openrouterModels';
+import { OpenRouterClient } from '../lib/openrouter';
+import { useTicTacToeGame } from '../hooks/useTicTacToeGame'; 
+import { Board } from './Board'; 
+import { LlmChat } from './LlmChat'; 
+import { PlayerChat } from './PlayerChat'; 
+import styles from './TicTacToe.module.css';
 
 // --- Main Game Component ---
-export default function Game() {
+export default function Game(): ReactElement {
   // State for OpenRouter integration
   const [apiKey, setApiKey] = useState<string>('');
   const [selectedModelId, setSelectedModelId] = useState<string>('');
   const [models, setModels] = useState<Map<string, ModelInfo>>(new Map());
   const [modelsLoading, setModelsLoading] = useState<boolean>(true);
   const [modelsError, setModelsError] = useState<string | null>(null);
-  const [llmChatMessages, setLlmChatMessages] = useState<string[]>(['LLM: Waiting for game to start...']); // State for LLM chat
+  const [llmChatMessages, setLlmChatMessages] = useState<string[]>(['System: Select API Key and Model to start.']); // State for LLM chat
+  const [isLlmThinking, setIsLlmThinking] = useState<boolean>(false);
+
+  // State to track player roles (X or O)
+  const [humanPlayerRole, setHumanPlayerRole] = useState<Player>(Player.X); // Human starts as X
+  const llmPlayerRole: Player = humanPlayerRole === Player.X ? Player.O : Player.X;
+
+  const openRouterClientRef = useRef<OpenRouterClient | null>(null);
+
+  // --- Game Logic Hook ---
+  const {
+    gameInstance,
+    handleSquareClick,
+    handleRestart,
+  } = useTicTacToeGame();
+
+  // --- Derive State from Instance ---
+  const currentBoardState: Readonly<BoardState> = gameInstance.getBoardState();
+  const currentGameState: GameState = gameInstance.getGameState();
+  const currentNextPlayer: Player = gameInstance.getNextPlayer();
+
+  // --- Effects ---
+
+  // Initialize/Re-initialize OpenRouterClient and set initial system prompts
+  useEffect(() => {
+    const initClientAndModel = async (): Promise<void> => {
+      if (apiKey && selectedModelId && gameInstance) {
+        try {
+          const client: OpenRouterClient = new OpenRouterClient(apiKey);
+          const modelInitialized: boolean = await client.initializeModel(selectedModelId);
+
+          if (!modelInitialized) {
+             throw new Error(`Failed to initialize model ${selectedModelId}.`);
+          }
+
+          openRouterClientRef.current = client;
+          // --- Add System Prompts ---
+          const llmSymbol: string = getPlayerSymbol(llmPlayerRole);
+          const systemPrompt1: string = gameInstance.explainGame();
+          const systemPrompt2: string = gameInstance.explainNextMoveFormat();
+          const systemPrompt3: string = `You are playing Tic-Tac-Toe as Player ${llmSymbol}. The board squares are numbered 0-8. Respond with only the single digit (0-8) corresponding to the empty square you want to play.`;
+
+          // initializeModel should clear context, but let's ensure it here too
+          client.clearContext();
+          client.addMessage('system', systemPrompt1);
+          client.addMessage('system', systemPrompt2);
+          client.addMessage('system', systemPrompt3);
+          // --- End System Prompts ---
+
+        console.log(`OpenRouterClient initialized/updated for model: ${selectedModelId} as Player ${llmSymbol}`);
+        setLlmChatMessages((prev: string[]) => [...prev, `System: LLM Client ready (${selectedModelId} as ${llmSymbol}).`]);
+        setModelsError(null); // Clear previous errors on successful init
+        console.log(`OpenRouterClient initialized/updated for model: ${selectedModelId} as Player ${llmSymbol}`);
+        setLlmChatMessages((prev: string[]) => [`System: LLM Client ready (${selectedModelId} as ${llmSymbol}).`]); // Reset chat on init
+
+        } catch (error) {
+          console.error("Failed to initialize OpenRouterClient:", error);
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          setModelsError(`Failed to init client: ${errorMessage}`);
+          openRouterClientRef.current = null; // Ensure client is null on error
+          setLlmChatMessages((prev: string[]) => [...prev, `System Error: Failed to initialize LLM - ${errorMessage}`]);
+        }
+      } else {
+          openRouterClientRef.current = null; // Clear client if key/model removed
+          if (apiKey && selectedModelId) {
+              // Only show missing game instance error if key/model are present
+              console.warn("Cannot initialize client: gameInstance is not available.");
+          }
+      }
+    };
+
+    initClientAndModel();
+  }, [apiKey, selectedModelId, llmPlayerRole, gameInstance]);
+
 
   // Fetch models on component mount
   useEffect(() => {
-    const fetchModels = async () => {
+    const fetchModels = async (): Promise<void> => {
       setModelsLoading(true);
       setModelsError(null);
       try {
         await ensureModelsFetched();
         setModels(getCachedModels());
-      } catch (error: any) {
+      } catch (error) {
         console.error("Failed to fetch models:", error);
-        setModelsError(error.message || 'Failed to load models');
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        setModelsError(errorMessage || 'Failed to load models');
       } finally {
         setModelsLoading(false);
       }
@@ -235,37 +112,157 @@ export default function Game() {
     fetchModels();
   }, []); // Empty dependency array ensures this runs only once on mount
 
-  // Game logic hook
-  const {
-    boardState,
-    gameState,
-    status,
-    xIsNext,
-    handleSquareClick,
-    handleRestart
-  } = useTicTacToeGame();
+  // --- State & Refs (Derived) ---
+  const isHumanTurn: boolean = currentGameState === GameState.Ongoing && currentNextPlayer === humanPlayerRole;
+  const isLlmTurn: boolean = currentGameState === GameState.Ongoing && currentNextPlayer === llmPlayerRole;
 
-  // Handler for player chat submitting a move
   const handlePlayerChatMoveSubmit = (index: number): void => {
-    // Add validation here? Or rely on hook? Rely on hook for now.
-    handleSquareClick(index);
+    if (!isHumanTurn) return; // Double check turn
+    try {
+      handleSquareClick(index);
+    } catch (error) {
+      console.log("Move error caught in main component:", error);
+    }
   };
 
-  // Handler for the main restart button
-  const handleMainRestart = () => {
-    handleRestart(); // Call the hook's restart
-    // Reset LLM chat as well
-    setLlmChatMessages(['LLM: Game restarted. Waiting...']);
-    // Player chat will reset via its useEffect dependency on handleRestart
+  const handleMainRestart = (): void => {
+    handleRestart();
+    // Swap roles for the next game BEFORE resetting chat/state
+    const nextHumanRole: Player = humanPlayerRole === Player.X ? Player.O : Player.X;
+    setHumanPlayerRole(nextHumanRole);
+
+    setIsLlmThinking(false); // Ensure LLM thinking state is reset
+    setLlmChatMessages(() => ['System: Game restarted. Roles swapped.']);
+
+    // Re-initialize model and system prompts for the new role if client exists
+    const reinitializeClientForNewRole = async (): Promise<void> => {
+      // Use gameInstance directly here too
+      if (openRouterClientRef.current && gameInstance && selectedModelId) {
+          const client: OpenRouterClient = openRouterClientRef.current;
+          const nextLlmRole: Player = nextHumanRole === Player.X ? Player.O : Player.X;
+          const llmSymbol: string = getPlayerSymbol(nextLlmRole);
+
+          try {
+              // Re-initialize the model
+              const modelInitialized: boolean = await client.initializeModel(selectedModelId);
+              if (!modelInitialized) {
+                  throw new Error(`Failed to re-initialize model ${selectedModelId} for new role.`);
+              }
+
+              // Add System Prompts for the new role (using gameInstance)
+              const systemPrompt1: string = gameInstance.explainGame();
+              const systemPrompt2: string = gameInstance.explainNextMoveFormat();
+              const systemPrompt3: string = `You are playing Tic-Tac-Toe as Player ${llmSymbol}. The board squares are numbered 0-8. Respond with only the single digit (0-8) corresponding to the empty square you want to play.`;
+
+              client.clearContext();
+              client.addMessage('system', systemPrompt1);
+              client.addMessage('system', systemPrompt2);
+              client.addMessage('system', systemPrompt3);
+              console.log(`System prompts updated for LLM role: ${llmSymbol}`);
+              setLlmChatMessages((prev: string[]) => [...prev, `System: LLM role updated to ${llmSymbol}.`]);
+          } catch (error) {
+              console.error("Failed to re-initialize client for new role:", error);
+              const errorMessage = error instanceof Error ? error.message : String(error);
+              setModelsError(`Failed to update LLM role: ${errorMessage}`);
+              setLlmChatMessages((prev: string[]) => [...prev, `System Error: Failed to update LLM role - ${errorMessage}`]);
+          }
+      }
+    };
+    reinitializeClientForNewRole();
   };
+
+  // Determine overall game status message including roles
+  let gameStatusDisplay: string;
+   switch (currentGameState) {
+    case GameState.Draw:
+      gameStatusDisplay = 'Game over: Draw';
+      break;
+    case GameState.XWins:
+      gameStatusDisplay = `Game over: ${getPlayerSymbol(Player.X)} wins! (${Player.X === humanPlayerRole ? 'You' : 'LLM'})`;
+      break;
+    case GameState.OWins:
+      gameStatusDisplay = `Game over: ${getPlayerSymbol(Player.O)} wins! (${Player.O === humanPlayerRole ? 'You' : 'LLM'})`;
+      break;
+    default:
+      const currentPlayerSymbol: string = getPlayerSymbol(currentNextPlayer);
+      const turnIndicator: string = currentNextPlayer === humanPlayerRole ? 'Your' : 'LLM\'s';
+      gameStatusDisplay = `Game ongoing. ${turnIndicator} turn (${currentPlayerSymbol}).`;
+  }
+  if (isLlmThinking) {
+    gameStatusDisplay = "LLM is thinking...";
+  }
+
+
+  // --- LLM Turn Logic ---
+  const handleLlmMove = useCallback(async (): Promise<void> => {
+    const client: OpenRouterClient | null = openRouterClientRef.current;
+    // Use gameInstance directly in the callback closure
+    if (!client || !gameInstance || !llmPlayerRole) {
+      setLlmChatMessages((prev: string[]) => [...prev, "System: LLM Client not ready or game not initialized."]);
+      return;
+    }
+
+    setIsLlmThinking(true);
+    setLlmChatMessages((prev: string[]) => [...prev, "LLM: Thinking..."]);
+
+    const llmSymbol: string = getPlayerSymbol(llmPlayerRole);
+    const userPrompt: string = gameInstance.displayGameStatus();
+
+    try {
+      client.addMessage('user', userPrompt);
+      setLlmChatMessages((prev: string[]) => [...prev, `System: Sending prompt to LLM (${llmSymbol})...`]);
+      // Optional: Add current context to chat for debugging/visibility
+
+      const response: string | null = await client.getCompletion();
+      setLlmChatMessages((prev: string[]) => [...prev, `LLM Raw Response: ${response}`]);
+
+      // --- Parse and Validate LLM Move ---
+      const potentialMove: RegExpMatchArray | null = response ? response.trim().match(/\b([0-8])\b/) : null;
+      if (!potentialMove) {
+        throw new Error(`LLM response did not contain a valid move number (0-8). Response: "${response}"`);
+      }
+
+      const moveIndex: number = parseInt(potentialMove[1], 10);
+
+      setLlmChatMessages((prev: string[]) => [...prev, `LLM (${llmSymbol}) chose square: ${moveIndex}`]);
+      handleSquareClick(moveIndex);
+
+    } catch (error) { 
+      console.error("LLM move error:", error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      setLlmChatMessages((prev: string[]) => [...prev, `System Error: ${errorMessage}`]);
+    } finally {
+      setIsLlmThinking(false);
+    }
+  }, [llmPlayerRole, handleSquareClick, gameInstance]);
+
+  // Effect to trigger LLM move
+  useEffect(() => {
+    const latestGameState: GameState = gameInstance.getGameState();
+    const latestNextPlayer: Player = gameInstance.getNextPlayer();
+    const isLlmTurnNow: boolean = latestGameState === GameState.Ongoing && latestNextPlayer === llmPlayerRole;
+
+    if (isLlmTurnNow && openRouterClientRef.current && !isLlmThinking) {
+      // Add a small delay to make the game flow feel more natural
+      const timer: NodeJS.Timeout | number = setTimeout(() => {
+        handleLlmMove(); // handleLlmMove is stable due to useCallback
+      }, 500); // 500ms delay
+
+      return (): void => clearTimeout(timer); 
+    }
+    // Dependencies now reflect stable values needed by the effect logic.
+    // The effect runs on every render triggered by forceUpdate in the hook,
+    // and re-checks the conditions (isLlmTurnNow) inside.
+  }, [gameInstance, llmPlayerRole, isLlmThinking, handleLlmMove]);
+
 
   // Create model options for the dropdown
-  const modelOptions = useMemo(() => {
-    const options = [];
+  const modelOptions = useMemo<ReactElement[]>(() => {
+    const options: ReactElement[] = [];
     options.push(<option key="default" value="" disabled>Select a Model</option>);
     Array.from(models.values())
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .forEach(model => {
+      .sort((a: ModelInfo, b: ModelInfo) => a.name.localeCompare(b.name))
+      .forEach((model: ModelInfo) => {
         options.push(<option key={model.id} value={model.id}>{model.name}</option>);
       });
     return options;
@@ -288,7 +285,7 @@ export default function Game() {
                 type="password"
                 id="apiKey"
                 value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setApiKey(e.target.value)}
                 placeholder="Enter your OpenRouter API Key"
                 className={styles.configInput}
               />
@@ -298,7 +295,7 @@ export default function Game() {
               <select
                 id="modelSelect"
                 value={selectedModelId}
-                onChange={(e) => setSelectedModelId(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedModelId(e.target.value)}
                 disabled={modelsLoading || !!modelsError || !apiKey}
                 className={styles.configSelect}
               >
@@ -309,13 +306,18 @@ export default function Game() {
               {!apiKey && <span className={styles.configHint}>(Enter API Key to enable)</span>}
             </div>
           </div>
-          <LlmChat messages={llmChatMessages} />
+          <LlmChat messages={llmChatMessages} llmPlayer={llmPlayerRole} />
         </div>
 
         {/* Center Column: Board, Status, Restart */}
         <div className={styles.centerColumn}>
-          <div className={styles.status}>{status}</div>
-          <Board squares={boardState} onSquareClick={handleSquareClick} />
+          <div className={styles.status}>{gameStatusDisplay}</div>
+          {/* Disable board clicks if it's not human's turn or game is over */}
+          <Board
+             squares={currentBoardState} // Use derived state
+             onSquareClick={handleSquareClick}
+             disabled={!isHumanTurn || currentGameState !== GameState.Ongoing} // Use derived state
+          />
           <button onClick={handleMainRestart} className={styles.restartButton}>
             Restart Game
           </button>
@@ -324,10 +326,11 @@ export default function Game() {
         {/* Right Column: Player Chat */}
         <div className={styles.rightColumn}>
           <PlayerChat
-            gameState={gameState}
-            xIsNext={xIsNext}
+            gameState={currentGameState}
+            humanPlayer={humanPlayerRole}
+            nextPlayer={currentNextPlayer}
             onMoveSubmit={handlePlayerChatMoveSubmit}
-            onRestart={handleMainRestart} // Pass main restart to trigger chat reset
+            onRestart={handleMainRestart}
           />
         </div>
 

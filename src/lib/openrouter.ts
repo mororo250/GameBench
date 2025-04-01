@@ -2,7 +2,7 @@ import OpenAI from 'openai';
 import { ChatCompletionMessageParam, ChatCompletion } from 'openai/resources/chat/completions';
 import { ModelInfo, ensureModelsFetched, getCachedModels } from './openrouterModels'; // Import from the new file
 
-// Re-export getCachedModels if needed by other parts of the application directly importing from openrouter.ts
+// This allow other models to use the same cache without needing to import from openrouterModels.ts
 export { getCachedModels };
 
 interface ChatMessage {
@@ -10,34 +10,32 @@ interface ChatMessage {
   content: string;
 }
 
-// Interface for entries stored in the context array, including token info and cost for assistant responses
 interface ContextEntry extends ChatMessage {
-  inputTokens?: number;  // Tokens for the prompt *leading to* this assistant message
-  outputTokens?: number; // Tokens for *this* assistant message content
-  cost?: number;         // Cost incurred for generating this assistant message
+  inputTokens?: number;  
+  outputTokens?: number; 
+  cost?: number;
 }
 
 export class OpenRouterClient {
   private client: OpenAI;
   private apiKey: string;
-  private modelInfo: ModelInfo | null = null; // Stores fetched model details
-  private context: ContextEntry[]; // Stores the conversation history with token/cost info
+  private modelInfo: ModelInfo | null = null;
+  private context: ContextEntry[]; 
   private totalInputTokens: number;
   private totalOutputTokens: number;
-  private totalCost: number; // Total cost accumulated for completions
+  private totalCost: number; 
 
   /**
    * Initializes the OpenRouter client instance.
    * The model must be set separately using initializeModel.
    * @param apiKey - The user's OpenRouter API key.
-   * @param initialContext - Optional initial conversation context (basic ChatMessage format).
    */
-  constructor(apiKey: string, initialContext: ChatMessage[] = []) {
+  constructor(apiKey: string) {
     if (!apiKey) {
       throw new Error("OpenRouter API key is required.");
     }
     this.apiKey = apiKey;
-    this.context = initialContext.map(msg => ({ ...msg })); // Initialize context
+    this.context = [];
     this.totalInputTokens = 0;
     this.totalOutputTokens = 0;
     this.totalCost = 0;
@@ -59,10 +57,10 @@ export class OpenRouterClient {
    */
   async initializeModel(modelId: string): Promise<boolean> {
     try {
-      await ensureModelsFetched(); // Uses the imported function
+      await ensureModelsFetched();
 
-      const modelsCache = getCachedModels(); // Get the cache from the imported function
-      const modelData = modelsCache.get(modelId);
+      const modelsCache: Map<string, ModelInfo> = getCachedModels();
+      const modelData: ModelInfo | undefined = modelsCache.get(modelId);
 
       if (!modelData) {
         console.error(`Model with ID "${modelId}" not found in cached OpenRouter models or has invalid data.`);
@@ -70,21 +68,17 @@ export class OpenRouterClient {
         return false;
       }
 
-      // We have valid model data from the cache
       this.modelInfo = modelData;
 
       console.log(`Initialized model: ${this.modelInfo.name} (${this.modelInfo.id})`);
       console.log(` - Context Length: ${this.modelInfo.maxContextLength}`);
-      // Use toFixed for potentially very small numbers instead of toExponential for better readability
-      // Costs are already per million tokens in the cached ModelInfo
       console.log(` - Prompt Cost/MToken: $${this.modelInfo.promptMTokenCost.toFixed(6)}`);
       console.log(` - Completion Cost/MToken: $${this.modelInfo.completionMTokenCost.toFixed(6)}`);
 
-      this.clearState(); // Reset context and costs when changing models
+      this.clearState();
       return true;
 
     } catch (error) {
-      // Error likely occurred during the ensureModelsFetched call
       console.error(`Error initializing model ${modelId}:`, error);
       this.modelInfo = null;
       return false;
@@ -98,6 +92,13 @@ export class OpenRouterClient {
    */
   addMessage(role: 'user' | 'system', content: string): void {
     this.context.push({ role, content });
+  }
+
+  /**
+   * Clean all user rolle messages and assistant past messages.
+   */
+  clearContext(): void {
+    this.context = this.context.filter((msg: ContextEntry) => msg.role === 'system');
   }
 
   /**
@@ -125,7 +126,7 @@ export class OpenRouterClient {
 
     try {
       const completion: ChatCompletion = await this.client.chat.completions.create({
-        model: this.modelInfo.id, // Use the initialized model ID
+        model: this.modelInfo.id,
         messages: messagesForApi,
       });
 
@@ -136,13 +137,10 @@ export class OpenRouterClient {
         const inputTokens = usage.prompt_tokens ?? 0;
         const outputTokens = usage.completion_tokens ?? 0;
 
-        // Calculate cost for this specific completion
-        // Calculate cost for this specific completion using cost per million tokens
         const promptCost = (inputTokens / 1000000) * this.modelInfo.promptMTokenCost;
         const completionCost = (outputTokens / 1000000) * this.modelInfo.completionMTokenCost;
         const currentCost = promptCost + completionCost;
 
-        // Add the assistant's response to the context with token info and cost
         this.context.push({
           role: 'assistant',
           content: assistantResponseContent,
@@ -162,7 +160,7 @@ export class OpenRouterClient {
       }
     } catch (error) {
       console.error(`Error fetching completion from OpenRouter (${this.modelInfo.id}):`, error);
-      return null; // Indicate failure
+      return null; 
     }
   }
 

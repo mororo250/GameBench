@@ -3,7 +3,21 @@ export interface ModelInfo {
     name: string;
     maxContextLength: number;
     promptMTokenCost: number; 
-    completionMTokenCost: number; 
+    completionMTokenCost: number;
+}
+
+interface OpenRouterApiResponse {
+  data: OpenRouterRawModelData[];
+}
+
+interface OpenRouterRawModelData {
+  id: string;
+  name: string;
+  context_length: number | null;
+  pricing?: {
+    prompt?: string;
+    completion?: string;
+  };
 }
 
 const openRouterModelsCache: Map<string, ModelInfo> = new Map();
@@ -29,16 +43,14 @@ export async function ensureModelsFetched(): Promise<void> {
             if (!response.ok) {
                 throw new Error(`Failed to fetch models: ${response.statusText}`);
             }
-            const data = await response.json();
+            const data: OpenRouterApiResponse = await response.json();
 
-            data.data.forEach((modelData: any) => {
+            data.data.forEach((modelData: OpenRouterRawModelData) => {
                 const promptCostRaw = modelData.pricing?.prompt;
                 const completionCostRaw = modelData.pricing?.completion;
                 let promptCostPerMillion: number | null = null;
                 let completionCostPerMillion: number | null = null;
 
-                // Calculate costs per *million* tokens
-                // Parse string values from API to numbers
                 const promptCostNum = typeof promptCostRaw === 'string' ? parseFloat(promptCostRaw) : null;
                 const completionCostNum = typeof completionCostRaw === 'string' ? parseFloat(completionCostRaw) : null;
 
@@ -66,12 +78,12 @@ export async function ensureModelsFetched(): Promise<void> {
             });
             console.log(`Fetched and cached ${openRouterModelsCache.size} models from OpenRouter.`);
 
-        } catch (error) {
+        } catch (error) { 
             console.error("Error fetching or caching OpenRouter models:", error);
             openRouterModelsCache.clear();
             throw error; 
         } finally {
-            modelsFetchPromise = null; // Reset promise regardless of outcome
+            modelsFetchPromise = null;
         }
     })();
 
@@ -85,7 +97,7 @@ export async function ensureModelsFetched(): Promise<void> {
  */
 export function getCachedModels(): Map<string, ModelInfo> {
     if (openRouterModelsCache.size === 0 && !modelsFetchPromise) {
-        ensureModelsFetched().catch(err => {
+        ensureModelsFetched().catch((err) => {
             console.error("Initial fetch attempt for getCachedModels failed:", err);
         });
     }

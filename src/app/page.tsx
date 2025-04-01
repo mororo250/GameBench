@@ -1,6 +1,6 @@
-import React from 'react';
-import Game from '../components/TicTacToeGame'; // Import the main game component
+import React, { ReactElement } from 'react';
+import Game from '../components/TicTacToeGame';
 
-export default function Page() {
+export default function Page(): ReactElement {
   return <Game />; // Render the game component
 }

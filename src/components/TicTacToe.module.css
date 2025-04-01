@@ -1,137 +1,157 @@
-/* General Page Styles */
-.page {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 20px;
-  font-family: sans-serif;
-  min-height: 100vh; /* Ensure page takes full height */
+/* General Page1 Styles */
+.page
+{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    font-family: sans-serif;
+    min-height: 100vh; /* Ensure page takes full height */
 }
 
 /* Game Layout Styles */
-.gameLayout {
-  display: flex;
-  justify-content: space-between; /* Space out columns */
-  width: 100%;
-  max-width: 1200px; /* Limit overall width */
-  margin-top: 20px;
-  gap: 30px;
-  align-items: flex-start; 
+.gameLayout
+{
+    display: flex;
+    justify-content: space-between; /* Space out columns */
+    width: 100%;
+    max-width: 1200px; /* Limit overall width */
+    margin-top: 20px;
+    gap: 30px;
+    align-items: flex-start;
 }
 
-.leftColumn, .rightColumn {
-  width: 320px; /* Fixed width for side columns */
-  display: flex;
-  flex-direction: column;
-  gap: 20px; 
+.leftColumn, .rightColumn
+{
+    width: 320px; /* Fixed width for side columns */
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
-.centerColumn {
-  display: flex;
-  flex-direction: column;
-  align-items: center; /* Center board and status */
-  flex-grow: 1;
-} /* Added missing closing brace */
+.centerColumn
+{
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Center board and status */
+    flex-grow: 1;
+}
+
+/* Added missing closing brace */
 
 /* Configuration Section Styles */
-.configSection {
-  border: 1px solid #ccc;
-  padding: 15px;
-  border-radius: 5px;
-  background-color: #f9f9f9;
-  width: 100%;
+.configSection
+{
+    border: 1px solid #ccc;
+    padding: 15px;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+    width: 100%;
 }
 
-.configSection h2 {
-  margin-top: 0;
-  margin-bottom: 15px;
-  font-size: 1.1em;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 5px;
+.configSection h2
+{
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.1em;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5px;
 }
 
-.configItem {
-  margin-bottom: 10px;
-  display: flex;
-  flex-direction: column; /* Stack label and input */
+.configItem
+{
+    margin-bottom: 10px;
+    display: flex;
+    flex-direction: column; /* Stack label and input */
 }
 
-.configItem label {
-  margin-bottom: 5px;
-  font-weight: bold;
-  font-size: 0.9em;
+.configItem label
+{
+    margin-bottom: 5px;
+    font-weight: bold;
+    font-size: 0.9em;
 }
 
-.configInput, .configSelect {
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  width: 100%; /* Take full width */
-  box-sizing: border-box; /* Include padding and border in width */
+.configInput, .configSelect
+{
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    width: 100%; /* Take full width */
+    box-sizing: border-box; /* Include padding and border in width */
 }
 
-.configSelect:disabled {
-  background-color: #eee;
-  cursor: not-allowed;
+.configSelect:disabled
+{
+    background-color: #eee;
+    cursor: not-allowed;
 }
 
-.configHint {
-  font-size: 0.8em;
-  color: #666;
-  margin-top: 3px;
+.configHint
+{
+    font-size: 0.8em;
+    color: #666;
+    margin-top: 3px;
 }
 
 /* Game Status Styles */
-.status {
-  margin-bottom: 15px; /* margin */
-  font-size: 20px; /* Slightly larger */
-  font-weight: bold;
-  min-height: 24px; /* Prevent layout shift */
+.status
+{
+    margin-bottom: 15px; /* margin */
+    font-size: 20px; /* Slightly larger */
+    font-weight: bold;
+    min-height: 24px; /* Prevent layout shift */
 }
 
 /* Board Styles*/
-.board {
-  width: 300px; /*  3 * 100px */
-  border: 2px solid #555; /* Thicker border */
-  margin-bottom: 20px; /* Space below board */
+.board
+{
+    width: 300px; /*  3 * 100px */
+    border: 2px solid #555; /* Thicker border */
+    margin-bottom: 20px; /* Space below board */
 }
 
-.boardRow::after { /* Clearfix for floated squares */
-  clear: both;
-  content: "";
-  display: table;
+.boardRow::after
+{ /* Clearfix for floated squares */
+    clear: both;
+    content: "";
+    display: table;
 }
 
 /* Square Styles*/
-.square {
-  width: 100px;
-  height: 100px; 
-  border: 1px solid #999;
-  font-size: 48px;
-  font-weight: bold;
-  margin: -1px 0 0 -1px; /* Prevents double borders */
-  float: left;
-  background: #fff;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  line-height: 1;
-  transition: background-color 0.2s ease;
+.square
+{
+    width: 100px;
+    height: 100px;
+    border: 1px solid #999;
+    font-size: 48px;
+    font-weight: bold;
+    margin: -1px 0 0 -1px; /* Prevents double borders */
+    float: left;
+    background: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    line-height: 1;
+    transition: background-color 0.2s ease;
 }
 
-.square:hover {
-  background-color: #f0f0f0;
+.square:hover
+{
+    background-color: #f0f0f0;
 }
 
-.square:focus {
+.square:focus
+{
     outline: 2px solid #007bff; /* focus outline */
     outline-offset: -2px;
 }
 
 /* Game Chat Styles (Shared) */
-.chatContainer {
+.chatContainer
+{
     border: 1px solid #ccc;
     padding: 15px;
     border-radius: 5px;
@@ -140,15 +160,17 @@
     box-sizing: border-box;
 }
 
-.chatContainer h2 {
-  margin-top: 0;
-  margin-bottom: 10px;
-  font-size: 1.1em;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 5px;
+.chatContainer h2
+{
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 1.1em;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5px;
 }
 
-.chatBox {
+.chatBox
+{
     margin-top: 5px;
     width: 100%; /* Take full width */
     height: 250px; /* Increased height */
@@ -163,11 +185,13 @@
 }
 
 /* Specific style for read-only chat box */
-.readOnlyChatBox {
-  background-color: #f0f0f0; /* Slightly different background */
+.readOnlyChatBox
+{
+    background-color: #f0f0f0; /* Slightly different background */
 }
 
-.chatMessage {
+.chatMessage
+{
     margin: 3px 0; /* Slightly more spacing */
     font-size: 14px;
     flex-shrink: 0;
@@ -176,12 +200,14 @@
 }
 
 /* Player Chat Form Styles */
-.chatForm {
+.chatForm
+{
     display: flex;
     width: 100%; /* Take full width */
 }
 
-.chatInput {
+.chatInput
+{
     flex-grow: 1; /* Allow input to take available space */
     padding: 8px;
     margin-right: 5px;
@@ -189,7 +215,8 @@
     border-radius: 4px;
 }
 
-.chatButton {
+.chatButton
+{
     padding: 8px 15px;
     border: none;
     background-color: #007bff;
@@ -199,13 +226,15 @@
     white-space: nowrap; /* Prevent button text wrapping */
 }
 
-.chatButton:disabled {
+.chatButton:disabled
+{
     background-color: #cccccc;
     cursor: not-allowed;
 }
 
 /* Restart Button Styles */
-.restartButton {
+.restartButton
+{
     margin-top: 20px; /* Adjusted margin */
     padding: 12px 25px; /* Slightly larger */
     font-size: 16px;
@@ -217,6 +246,7 @@
     transition: background-color 0.2s ease;
 }
 
-.restartButton:hover {
+.restartButton:hover
+{
     background-color: #c82333;
 }

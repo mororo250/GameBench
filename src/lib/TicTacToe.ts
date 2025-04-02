@@ -46,10 +46,10 @@ export class TicTacToeGame
     // --- End Getters ---
 
     /**
-     * Attempts to make a move on the board.
+     * Attempts to make a move on the board using a 0-based index.
      * Validates the move and updates the game state directly if successful.
      * Throws an error if the move is invalid.
-     * @param squareIndex The index of the square to play (0-8).
+     * @param squareIndex The 0-based index of the square to play (0-8).
      * @throws Error if the move is invalid.
      */
     public makeMove(squareIndex: number): void
@@ -78,7 +78,7 @@ export class TicTacToeGame
      */
     public explainNextMoveFormat(): string
     {
-        return "To make a move, specify the index of the square you want to play (0-8). The squares are numbered from left-to-right, top-to-bottom:\n 0 | 1 | 2 \n-----------\n 3 | 4 | 5 \n-----------\n 6 | 7 | 8 \nOnly provide the single digit corresponding to the empty square.";
+        return "To make a move, specify the number of the square you want to play (1-9). The squares are numbered from left-to-right, top-to-bottom:\n 1 | 2 | 3 \n-----------\n 4 | 5 | 6 \n-----------\n 7 | 8 | 9 \nOnly provide the single digit corresponding to the empty square.";
     }
 
     /**
@@ -88,7 +88,7 @@ export class TicTacToeGame
      */
     public invalidMoveWarning(errorMessage: string): string
     {
-        return `Invalid move: ${errorMessage} Please choose an empty square (0-8).`;
+        return `Invalid move: ${errorMessage} Please choose an empty square (1-9).`;
     }
 
     /**
@@ -166,14 +166,18 @@ export class TicTacToeGame
         {
             throw new Error("Game is already over.");
         }
+        // Validate 0-based index
         if (squareIndex < 0 || squareIndex > 8 || !Number.isInteger(squareIndex))
         {
-            throw new Error(`Invalid square index: ${squareIndex}. Must be an integer between 0 and 8.`);
+            // User sees 1-9, so adjust error message
+            throw new Error(`Invalid square number: ${squareIndex + 1}. Must correspond to an integer between 1 and 9.`);
         }
+        // Check board using 0-based index
         if (this.board[squareIndex] !== null)
         {
             const playerSymbol: 'X' | 'O' = this.board[squareIndex] === Player.X ? 'X' : 'O';
-            throw new Error(`Square ${squareIndex} is already taken by ${playerSymbol}.`);
+            // User sees 1-9, so adjust error message
+            throw new Error(`Square ${squareIndex + 1} is already taken by ${playerSymbol}.`);
         }
     }
 }

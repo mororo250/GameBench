@@ -37,7 +37,6 @@
     flex-grow: 1;
 }
 
-/* Added missing closing brace */
 
 /* Configuration Section Styles */
 .configSection
@@ -192,11 +191,15 @@
 
 .chatMessage
 {
-    margin: 3px 0; /* Slightly more spacing */
-    font-size: 14px;
-    flex-shrink: 0;
+    margin: 0; /* Reset margin, handled by wrapper */
+    padding: 8px 12px; /* Padding inside the message bubble */
+    border-radius: 15px; /* Rounded corners */
+    max-width: 80%; /* Limit message width */
     word-wrap: break-word;
     line-height: 1.4; /* Improve readability */
+    font-size: 14px;
+    background-color: #e9e9eb; /* Default background */
+    color: #000; /* Default text color */
 }
 
 /* Player Chat Form Styles */
@@ -249,4 +252,184 @@
 .restartButton:hover
 {
     background-color: #c82333;
+}
+
+/* API Key Validation Styles */
+.inputError
+{
+    border-color: red !important; /* Ensure override */
+}
+
+.errorMessage
+{
+    color: red;
+    font-size: 0.8em;
+    margin-top: 4px;
+    margin-bottom: 0; /* Reset default paragraph margin if needed */
+}
+
+.validatingMessage
+{
+    font-size: 0.8em;
+    margin-left: 8px;
+    color: #666; /* Use a less prominent color */
+    display: inline-block; /* Keep it on the same line as input if space allows */
+    vertical-align: middle;
+}
+
+/* === NEW STYLES for LlmChat === */
+
+.chatMessageWrapper
+{
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 10px; /* Space between messages */
+    width: 100%;
+}
+
+.messageLeft
+{
+    align-items: flex-start; /* Align LLM messages to the left */
+}
+
+.messageRight
+{
+    align-items: flex-end; /* Align User/System messages to the right */
+}
+
+.messageCenter
+{
+    align-items: center; /* Center fallback/error messages */
+}
+
+.messageError .chatMessage
+{
+    background-color: #f8d7da; /* Light red background for errors */
+    color: #721c24; /* Dark red text */
+    border: 1px solid #f5c6cb;
+}
+
+.messageRight .chatMessage
+{
+    background-color: #007bff; /* Blue background for user/system */
+    color: white;
+}
+
+.modelNameLabel, .errorLabel, .systemLabel
+{
+    font-size: 0.75em;
+    color: #666;
+    margin-bottom: 3px; /* Space between label and message bubble */
+    padding: 0 5px; /* Slight horizontal padding */
+}
+
+.messageLeft .modelNameLabel,
+.messageLeft .errorLabel,
+.messageLeft .systemLabel
+{
+    align-self: flex-start; /* Align label left for left messages */
+}
+
+.messageRight .modelNameLabel,
+.messageRight .errorLabel,
+.messageRight .systemLabel
+{
+    align-self: flex-end; /* Align label right for right messages */
+}
+
+.messageContent
+{
+    margin: 0;
+    padding: 0;
+    font-family: inherit; /* Use the same font as the rest */
+    font-size: inherit;
+    white-space: pre-wrap; /* Keep formatting (e.g., board layout) */
+    background: none; /* Transparent background */
+    border: none; /* No border */
+    color: inherit; /* Inherit color from parent .chatMessage */
+}
+
+/* === NEW STYLES for Opponent Selection & Display === */
+
+.opponentSelection
+{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px; /* Space below selection */
+    padding: 10px;
+    background-color: #f0f0f0; /* Light background for the section */
+    border-radius: 4px;
+}
+
+.opponentSelection label
+{
+    font-weight: bold;
+    margin-right: 5px;
+}
+
+.opponentSelection button
+{
+    padding: 6px 12px;
+    border: 1px solid #ccc;
+    background-color: #fff;
+    color: #333;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.opponentSelection button:hover:not(:disabled)
+{
+    background-color: #e9e9e9;
+    border-color: #bbb;
+}
+
+.opponentSelection button:disabled
+{
+    background-color: #007bff; /* Blue background for active/disabled */
+    color: white;
+    border-color: #0056b3;
+    cursor: default;
+}
+
+/* Style for the active button (redundant due to :disabled style above, but kept for clarity) */
+.activeButton
+{
+    background-color: #007bff;
+    color: white;
+    border-color: #0056b3;
+}
+
+.thinkingIndicator
+{
+    font-style: italic;
+    color: #555;
+    padding: 10px;
+    text-align: center;
+    background-color: #f9f9f9; /* Match config section */
+    border-top: 1px solid #eee; /* Separator line */
+    margin-top: -10px; /* Adjust spacing relative to chat */
+    border-bottom-left-radius: 5px; /* Match chat container */
+    border-bottom-right-radius: 5px;
+}
+
+/* General Error Text Style */
+.errorText
+{
+    color: red;
+    font-size: 0.9em;
+    margin-top: 5px;
+}
+
+/* Placeholder Style */
+.placeholder
+{
+    padding: 20px;
+    text-align: center;
+    color: #888;
+    background-color: #f0f0f0;
+    border: 1px dashed #ccc;
+    border-radius: 4px;
+    margin-top: 10px;
 }

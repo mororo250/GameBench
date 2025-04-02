@@ -1,29 +1,57 @@
-import OpenAI from 'openai';
-import {ChatCompletion, ChatCompletionMessageParam} from 'openai/resources/chat/completions';
-import {ensureModelsFetched, getCachedModels, ModelInfo} from './OpenRouterModels'; // Import from the new file
+import {ensureModelsFetched, getCachedModels, ModelInfo} from './OpenRouterModels';
 
 // This allow other models to use the same cache without needing to import from OpenRouterModels.ts
-export {getCachedModels};
+export { getCachedModels };
 
-interface ChatMessage
+export interface ChatMessage
 {
-    role: 'system' | 'user' | 'assistant';
+    role: 'system' | 'user' | 'assistant' | 'error';
     content: string;
+    modelName?: string; // Only for assistant messages
 }
 
-interface ContextEntry extends ChatMessage
-{
-    inputTokens?: number;
-    outputTokens?: number;
-    cost?: number;
+export interface CompletionResult {
+    success: boolean;
+    content: string | null;
+    error: Error | null;
 }
+
+interface OpenRouterCompletionResponse
+{
+    id: string;
+    choices: {
+        message: {
+            role: string;
+            content: string;
+        };
+    }[];
+}
+
+interface OpenRouterCompletionRequest
+{
+    model: string;
+    messages: { role: 'system' | 'user' | 'assistant'; content: string }[];
+}
+
+interface OpenRouterGenerationData
+{
+    id: string;
+    total_cost?: number;
+    tokens_prompt?: number;
+    tokens_completion?: number;
+}
+
+interface OpenRouterGenerationResponse
+{
+    data: OpenRouterGenerationData;
+}
+
 
 export class OpenRouterClient
 {
-    private client: OpenAI;
     private readonly apiKey: string;
     private modelInfo: ModelInfo | null = null;
-    private context: ContextEntry[];
+    private context: ChatMessage[]; // Use ChatMessage directly for context
     private totalInputTokens: number;
     private totalOutputTokens: number;
     private totalCost: number;
@@ -44,17 +72,18 @@ export class OpenRouterClient
         this.totalInputTokens = 0;
         this.totalOutputTokens = 0;
         this.totalCost = 0;
-
-        this.client = new OpenAI({
-            baseURL: "https://openrouter.ai/api/v1", apiKey: this.apiKey, dangerouslyAllowBrowser: true,
-        });
     }
 
     /**
-     * Fetches model details from OpenRouter and sets the active model for the client.
-     * @param modelId - The identifier of the model to use (e.g., "openai/gpt-4o").
-     * Sets the active model for the client instance using globally cached data.
-     * Fetches model data globally if not already cached.
+     * Gets the name of the currently initialized model.
+     * @returns The model name string, or null if no model is initialized.
+     */
+    getModelName(): string | null
+    {
+        return this.modelInfo?.name ?? null;
+    }
+
+    /**
      * @param modelId - The identifier of the model to use (e.g., "openai/gpt-4o").
      * @returns True if the model was set successfully, false otherwise.
      */
@@ -99,91 +128,181 @@ export class OpenRouterClient
      */
     addMessage(role: 'user' | 'system', content: string): void
     {
-        this.context.push({role, content});
+        // Add message without modelName for user/system
+        this.context.push({ role, content });
     }
 
     /**
-     * Clean all user rolle messages and assistant past messages.
+     * Clean Context completely
      */
     clearContext(): void
     {
-        this.context = this.context.filter((msg: ContextEntry) => msg.role === 'system');
+        this.context = [];
     }
 
     /**
      * Sends the current context to the LLM and gets a completion.
-     * Adds the assistant's response (with token info and cost) to the context.
+     * Adds the assistant's response (with token info and cost) to the context if successful.
      * Requires initializeModel to have been called successfully first.
      *
-     * @returns The content of the assistant's response, or null if an error occurs or model not initialized.
+     * @returns A CompletionResult object containing success status, content (on success),
+     *          and error details (on failure).
      */
-    async getCompletion(): Promise<string | null>
+    async getCompletion(): Promise<CompletionResult> 
     {
         if (!this.modelInfo)
         {
-            console.error("Model not initialized. Call initializeModel(modelId) first.");
-            return null;
+            const error = new Error("Model not initialized. Call initializeModel(modelId) first.");
+            console.error(error.message);
+            return { success: false, content: null, error: error };
         }
 
-        const messagesForApi: ChatCompletionMessageParam[] = this.context.map(({role, content}) => ({
-            role, content,
-        }));
+        const messagesForApi: { role: 'system' | 'user' | 'assistant'; content: string }[] = this.context
+            .filter((msg): msg is ChatMessage & { role: 'system' | 'user' | 'assistant' } => msg.role !== 'error')
+            .map(({ role, content }) => ({
+                role, content,
+            }));
 
         if (messagesForApi.length === 0)
         {
-            console.error("Cannot get completion with empty context.");
-            return null;
+            const error = new Error("Cannot get completion with empty context.");
+            console.error(error.message);
+            return { success: false, content: null, error: error };
+        }
+
+        const requestBody: OpenRouterCompletionRequest = {
+            model: this.modelInfo.id,
+            messages: messagesForApi,
+        };
+
+        let completionResponse: OpenRouterCompletionResponse | null = null;
+        let assistantResponseContent: string | null = null;
+
+        try
+        {
+            const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${this.apiKey}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(requestBody),
+            });
+
+            if (!response.ok)
+            {
+                let errorBody = "Unknown error";
+                try { errorBody = await response.text(); } catch (e) { /* Ignore */ }
+                throw new Error(`OpenRouter API Error (${response.status}) on /chat/completions: ${response.statusText}. Body: ${errorBody}`);
+            }
+
+            completionResponse = await response.json() as OpenRouterCompletionResponse;
+            assistantResponseContent = completionResponse?.choices[0]?.message?.content ?? null;
+
+            if (!assistantResponseContent || !completionResponse?.id)
+            {
+                throw new Error("Invalid response structure or missing content/ID from /chat/completions.");
+            }
+
+            this.context.push({
+                role: 'assistant',
+                content: assistantResponseContent,
+                modelName: this.modelInfo.name
+            });
+
+        } catch (error: unknown)
+        {
+            const typedError = error instanceof Error ? error : new Error(String(error));
+            const errorMessage = `Error during fetch to /chat/completions (${this.modelInfo.id}): ${typedError.message}`;
+            console.error(errorMessage, typedError);
+            return { success: false, content: null, error: typedError };
         }
 
         try
         {
-            const completion: ChatCompletion = await this.client.chat.completions.create({
-                model: this.modelInfo.id, messages: messagesForApi,
+            const generationId = completionResponse.id;
+            const generationUrl = `https://openrouter.ai/api/v1/generation?id=${generationId}`;
+
+            const generationResponse = await fetch(generationUrl, {
+                method: "GET",
+                headers: {
+                    "Authorization": `Bearer ${this.apiKey}`,
+                },
             });
 
-            const assistantResponseContent = completion.choices[0]?.message?.content;
-            const usage = completion.usage;
-
-            if (assistantResponseContent && usage)
+            if (!generationResponse.ok)
             {
-                const inputTokens = usage.prompt_tokens ?? 0;
-                const outputTokens = usage.completion_tokens ?? 0;
-
-                const promptCost = (inputTokens / 1000000) * this.modelInfo.promptMTokenCost;
-                const completionCost = (outputTokens / 1000000) * this.modelInfo.completionMTokenCost;
-                const currentCost = promptCost + completionCost;
-
-                this.context.push({
-                    role: 'assistant',
-                    content: assistantResponseContent,
-                    inputTokens: inputTokens,
-                    outputTokens: outputTokens,
-                    cost: currentCost,
-                });
-
-                this.totalInputTokens += inputTokens;
-                this.totalOutputTokens += outputTokens;
-                this.totalCost += currentCost;
-
-                return assistantResponseContent;
+                let errorBody = "Unknown error";
+                try { errorBody = await generationResponse.text(); } catch (e) { /* Ignore */ }
+                console.error(`OpenRouter API Error (${generationResponse.status}) on /generation: ${generationResponse.statusText}. Body: ${errorBody}`);
+                return { success: true, content: assistantResponseContent, error: null };
             }
-            else
-            {
-                console.error("No response content or usage data received from OpenRouter.");
-                return null;
-            }
-        } catch (error)
+
+            const generationDetails: OpenRouterGenerationResponse = await generationResponse.json();
+
+            const costData = generationDetails?.data;
+            const currentCost = costData?.total_cost ?? 0;
+            const inputTokens = costData?.tokens_prompt ?? 0;
+            const outputTokens = costData?.tokens_completion ?? 0;
+
+            this.totalInputTokens += inputTokens;
+            this.totalOutputTokens += outputTokens;
+            this.totalCost += currentCost;
+
+            return { success: true, content: assistantResponseContent, error: null };
+
+        } catch (error: unknown)
         {
-            console.error(`Error fetching completion from OpenRouter (${this.modelInfo.id}):`, error);
-            return null;
+            const typedError = error instanceof Error ? error : new Error(String(error));
+            console.error(`Error during fetch to /generation (${this.modelInfo.id}): ${typedError.message}`, typedError);
+            return { success: true, content: assistantResponseContent, error: null };
         }
     }
 
+    /**
+     * Resets the conversation context and token/cost totals.
+     * Typically called when switching models or starting a new conversation.
+     */
     clearState(): void
     {
         this.context = [];
         this.totalInputTokens = 0;
         this.totalOutputTokens = 0;
         this.totalCost = 0;
+    }
+}
+
+export async function validateOpenRouterKey(apiKey: string): Promise<{ isValid: boolean; error?: string }>
+{
+    if (!apiKey || typeof apiKey !== "string")
+    {
+        return { isValid: false, error: "API key must be a non-empty string." };
+    }
+
+    try
+    {
+        const response = await fetch("https://openrouter.ai/api/v1/auth/key", {
+            method: "GET",
+            headers: {
+                "Authorization": `Bearer ${apiKey}`,
+            },
+        });
+
+        if (response.ok)
+        {
+            return { isValid: true };
+        }
+        else if (response.status === 401)
+        {
+            return { isValid: false, error: "Invalid API Key." };
+        }
+        else
+        {
+            return { isValid: false, error: `Validation failed (Status: ${response.status})` };
+        }
+    } catch (error)
+    {
+        console.error("Network error during API key validation:", error);
+        return { isValid: false, error: "Network error during validation." };
     }
 }

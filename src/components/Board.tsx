@@ -8,7 +8,7 @@ export function Square({value, onSquareClick, disabled}: {
 }): ReactElement
 {
     return (<button className={styles.square} onClick={onSquareClick} disabled={disabled || value !== null}>
-            {getPlayerSymbol(value)} {/* Use imported function */}
+            {getPlayerSymbol(value)} {}
         </button>);
 }
 

@@ -1,15 +1,15 @@
 import React, { ChangeEvent, Dispatch, ReactElement, SetStateAction, useEffect, useMemo, useState } from "react";
-import { ensureModelsFetched, getCachedModels, ModelInfo } from "../lib/OpenRouterModels";
-import styles from "./TicTacToe.module.css";
+import { ensureModelsFetched, getCachedModels, ModelInfo } from "../../lib/OpenRouterModels";
+import playerStyles from "../player/Player.module.css";
 
 interface ModelSelectorProps
 {
-    apiKey: string; // Needed to enable/disable the selector
+    isApiKeySet: boolean;
     selectedModelId: string;
     setSelectedModelId: Dispatch<SetStateAction<string>>;
 }
 
-export function ModelSelector({ apiKey, selectedModelId, setSelectedModelId }: ModelSelectorProps): ReactElement
+export function ModelSelector({ isApiKeySet, selectedModelId, setSelectedModelId }: ModelSelectorProps): ReactElement
 {
     const [models, setModels] = useState<Map<string, ModelInfo>>(new Map());
     const [modelsLoading, setModelsLoading] = useState<boolean>(true);
@@ -59,20 +59,20 @@ export function ModelSelector({ apiKey, selectedModelId, setSelectedModelId }: M
     };
 
     return (
-        <div className={styles.configItem}>
+        <div className={playerStyles.configItem}>
             <label htmlFor="modelSelect">Select LLM Model:</label>
             <select
                 id="modelSelect"
                 value={selectedModelId}
                 onChange={handleModelChange}
-                disabled={modelsLoading || !!modelsError || !apiKey}
-                className={styles.configSelect}
+                disabled={modelsLoading || !!modelsError || !isApiKeySet}
+                className={playerStyles.configSelect}
             >
                 {modelsLoading && <option value="" disabled>Loading models...</option>}
                 {modelsError && <option value="" disabled>Error: {modelsError}</option>}
                 {!modelsLoading && !modelsError && modelOptions}
             </select>
-            {!apiKey && <span className={styles.configHint}>(Enter API Key to enable)</span>}
+            {!isApiKeySet && <span className={playerStyles.configHint}>(Enter API Key to enable)</span>}
         </div>
     );
 }

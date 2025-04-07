@@ -1,13 +1,13 @@
 import React, {ReactElement} from 'react';
-import {BoardState, getPlayerSymbol, SquareValue} from '../lib/TicTacToe';
-import styles from './TicTacToe.module.css';
+import {BoardState, getPlayerSymbol, SquareValue} from '../../lib/TicTacToe';
+import gameStyles from './Game.module.css';
 
 // Square component - Disable button when not human's turn or game over
 export function Square({value, onSquareClick, disabled}: {
     value: SquareValue, onSquareClick: () => void, disabled: boolean
 }): ReactElement
 {
-    return (<button className={styles.square} onClick={onSquareClick} disabled={disabled || value !== null}>
+    return (<button className={gameStyles.square} onClick={onSquareClick} disabled={disabled || value !== null}>
             {getPlayerSymbol(value)} {}
         </button>);
 }
@@ -31,13 +31,13 @@ export function Board({squares, onSquareClick, disabled}: {
                 disabled={disabled} // Pass disabled prop
             />);
         }
-        boardRows.push(<div key={row} className={styles.boardRow}>
+        boardRows.push(<div key={row} className={gameStyles.boardRow}>
             {squaresInRow}
         </div>);
     }
 
     return (
-        <div className={styles.board}>
+        <div className={gameStyles.board}>
             {boardRows}
         </div>);
 }

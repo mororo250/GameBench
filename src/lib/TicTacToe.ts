@@ -78,7 +78,7 @@ export class TicTacToeGame
      */
     public explainNextMoveFormat(): string
     {
-        return "To make a move, specify the number of the square you want to play (1-9). The squares are numbered from left-to-right, top-to-bottom:\n 1 | 2 | 3 \n-----------\n 4 | 5 | 6 \n-----------\n 7 | 8 | 9 \nOnly provide the single digit corresponding to the empty square.";
+        return "To make a move, specify the number of the square you want to play (1-9). The squares are numbered from left-to-right, top-to-bottom:\n 1 | 2 | 3 \n-----------\n 4 | 5 | 6 \n-----------\n 7 | 8 | 9 \n. The number must be the last thing written in your answer";
     }
 
     /**

@@ -1,6 +1,6 @@
 import React, { ChangeEvent, Dispatch, ReactElement, SetStateAction, useState, useCallback } from "react";
-import styles from "./TicTacToe.module.css";
-import { validateOpenRouterKey } from "../lib/OpenRouter";
+import playerStyles from "../player/Player.module.css";
+import { validateOpenRouterKey } from "../../lib/OpenRouter";
 
 interface ApiKeyInputProps
 {
@@ -73,7 +73,7 @@ export function ApiKeyInput({ apiKey, setApiKey }: ApiKeyInputProps): ReactEleme
     };
 
     return (
-        <div className={styles.configItem}>
+        <div className={playerStyles.configItem}>
             <label htmlFor="apiKey">OpenRouter API Key:</label>
             <input
                 type="password"
@@ -82,13 +82,13 @@ export function ApiKeyInput({ apiKey, setApiKey }: ApiKeyInputProps): ReactEleme
                 onChange={handleApiKeyChange}
                 onBlur={handleBlur}
                 placeholder="Enter your OpenRouter API Key"
-                className={`${styles.configInput} ${isValid === false ? styles.inputError : ""}`}
+                className={`${playerStyles.configInput} ${isValid === false ? playerStyles.inputError : ""}`}
                 aria-invalid={isValid === false}
                 aria-describedby={isValid === false ? "apiKeyError" : undefined}
             />
-            {isValidating && <span className={styles.validatingMessage}> Validating...</span>}
+            {isValidating && <span className={playerStyles.validatingMessage}> Validating...</span>}
             {isValid === false && errorMessage && (
-                <p id="apiKeyError" className={styles.errorMessage} style={{ color: "red" }}>
+                <p id="apiKeyError" className={playerStyles.errorMessage} style={{ color: "red" }}>
                     {errorMessage}
                 </p>
             )}

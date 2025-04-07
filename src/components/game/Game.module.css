@@ -1,0 +1,73 @@
+/* Game Status Styles */
+.status
+{
+    margin-bottom: 15px; /* margin */
+    font-size: 20px; /* Slightly larger */
+    font-weight: bold;
+    min-height: 24px; /* Prevent layout shift */
+}
+
+/* Board Styles*/
+.board
+{
+    width: 300px; /*  3 * 100px */
+    border: 2px solid #555; /* Thicker border */
+    margin-bottom: 20px; /* Space below board */
+}
+
+.boardRow::after
+{ /* Clearfix for floated squares */
+    clear: both;
+    content: "";
+    display: table;
+}
+
+/* Square Styles*/
+.square
+{
+    width: 100px;
+    height: 100px;
+    border: 1px solid #999;
+    font-size: 48px;
+    font-weight: bold;
+    margin: -1px 0 0 -1px; /* Prevents double borders */
+    float: left;
+    background: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    line-height: 1;
+    transition: background-color 0.2s ease;
+}
+
+.square:hover
+{
+    background-color: #f0f0f0;
+}
+
+.square:focus
+{
+    outline: 2px solid #007bff; /* focus outline */
+    outline-offset: -2px;
+}
+
+/* Restart Button Styles */
+.restartButton
+{
+    margin-top: 20px; /* Adjusted margin */
+    padding: 12px 25px; /* Slightly larger */
+    font-size: 16px;
+    border: none;
+    background-color: #dc3545;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.restartButton:hover
+{
+    background-color: #c82333;
+}

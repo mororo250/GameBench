@@ -1,0 +1,82 @@
+.historyTableContainer
+{
+    margin-top: 20px;
+    padding: 15px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    font-family: sans-serif;
+}
+
+.historyTableContainer h2
+{
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #333;
+    text-align: center;
+}
+
+.historyTable
+{
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 10px;
+}
+
+.historyTable th,
+.historyTable td
+{
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    text-align: left;
+    vertical-align: top;
+}
+
+.historyTable th
+{
+    background-color: #eee;
+    font-weight: bold;
+    color: #555;
+}
+
+.historyTable tbody tr:nth-child(even)
+{
+    background-color: #f2f2f2;
+}
+
+.historyTable tbody tr:hover
+{
+    background-color: #e9e9e9;
+}
+
+.loading,
+.error,
+.noData
+{
+    padding: 15px;
+    margin-top: 10px;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.loading
+{
+    color: #555;
+    background-color: #f0f0f0;
+}
+
+.error
+{
+    color: #D8000C;
+    background-color: #FFD2D2;
+    border: 1px solid #D8000C;
+}
+
+.noData
+{
+    color: #4F8A10;
+    background-color: #DFF2BF;
+    border: 1px solid #4F8A10;
+}
+
+/* Final newline */

@@ -1,0 +1,39 @@
+/* General Page Styles */
+.page
+{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    font-family: sans-serif;
+    min-height: 100vh; /* Ensure page takes full height */
+}
+
+/* Game Layout Styles */
+.gameLayout
+{
+    display: flex;
+    justify-content: space-between; /* Space out columns */
+    width: 100%;
+    max-width: 1200px; /* Limit overall width */
+    margin-top: 20px;
+    gap: 30px;
+    align-items: flex-start;
+}
+
+.leftColumn,
+.rightColumn
+{
+    width: 320px; /* Fixed width for side columns */
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.centerColumn
+{
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Center board and status */
+    flex-grow: 1;
+}

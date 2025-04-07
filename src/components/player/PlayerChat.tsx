@@ -1,6 +1,6 @@
 import React, { ChangeEvent, FormEvent, ReactElement, useEffect, useRef, useState } from 'react';
-import { GameState, getPlayerSymbol, Player } from '../lib/TicTacToe';
-import styles from './TicTacToe.module.css';
+import { GameState, getPlayerSymbol, Player } from '../../lib/TicTacToe';
+import playerStyles from './Player.module.css';
 
 interface PlayerChatProps
 {
@@ -31,11 +31,7 @@ export function PlayerChat({
         setInputValue('');
     }, [onRestart, humanPlayer]);
 
-    useEffect(() =>
-    {
-        chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [chatMessages]);
-
+    
     const handleInternalChatSubmit = (event: FormEvent<HTMLFormElement>) =>
     {
         event.preventDefault();
@@ -74,23 +70,24 @@ export function PlayerChat({
     };
 
     return (
-        <div className={styles.chatContainer}>
+        <div className={playerStyles.chatContainer}>
             <h2>{title}</h2>
-            <div className={styles.chatBox}>
+            <div className={playerStyles.chatBox}>
                 {chatMessages.map((msg: string, index: number) => (
-                    <p key={index} className={styles.chatMessage}>{msg}</p>))}
+                    <p key={index} className={playerStyles.chatMessage}>{msg}</p>))}
+                {/* Keep the ref for potential future use, but don't scroll automatically */}
                 <div ref={chatEndRef} />
             </div>
-            <form onSubmit={handleInternalChatSubmit} className={styles.chatForm}>
+            <form onSubmit={handleInternalChatSubmit} className={playerStyles.chatForm}>
                 <input
                     type="text"
                     value={inputValue}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => setInputValue(e.target.value)}
                     placeholder={isPlayerTurn ? "Enter move (1-9)" : "Wait for your turn..."}
-                    className={styles.chatInput}
+                    className={playerStyles.chatInput}
                     disabled={!isPlayerTurn}
                 />
-                <button type="submit" className={styles.chatButton} disabled={!isPlayerTurn}>Send</button>
+                <button type="submit" className={playerStyles.chatButton} disabled={!isPlayerTurn}>Send</button>
             </form>
         </div>
     );

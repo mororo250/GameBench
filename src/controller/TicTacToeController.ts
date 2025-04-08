@@ -1,6 +1,5 @@
 import { TicTacToeGame, Player, GameState, BoardState } from "../lib/TicTacToe";
 import { MatchHistory, AddMatchInput } from "../lib/matchHistory";
-import { LlmController, LlmControllerState, ChatMessage } from "./LlmController";
 
 export enum PlayerType
 {
@@ -14,76 +13,56 @@ export interface PlayerConfig
     modelId?: string;
 }
 
-export interface TicTacToeControllerState
+export interface TicTacToeState
 {
     boardState: Readonly<BoardState>;
     gameState: GameState;
     nextPlayer: Player;
     playerXConfig: PlayerConfig;
     playerOConfig: PlayerConfig;
-    apiKey: string;
-    isThinkingX: boolean;
-    isThinkingO: boolean;
-    errorX: string | null;
-    errorO: string | null;
-    chatHistoryX: Readonly<ChatMessage[]>;
-    chatHistoryO: Readonly<ChatMessage[]>;
     statusMessage: string;
+    error: string | null; // Error related to the last attempted move
 }
 
-export type StateChangeListener = (newState: TicTacToeControllerState) => void;
+export type TicTacToeStateChangeListener = (newState: TicTacToeState) => void;
 
+/**
+ * Manages the core logic and state of a Tic Tac Toe game,
+ * including player configuration, status message generation,
+ * and recording match history.
+ */
 export class TicTacToeController
 {
     private game: TicTacToeGame;
+    private state: TicTacToeState;
+    private listeners: TicTacToeStateChangeListener[] = [];
     private historyManager: MatchHistory;
-    private state: TicTacToeControllerState;
-    private listeners: StateChangeListener[] = [];
 
-    private llmControllerX: LlmController;
-    private llmControllerO: LlmController;
-    private llmUnsubscribeX: (() => void) | null = null;
-    private llmUnsubscribeO: (() => void) | null = null;
-
-
-    constructor(historyManager: MatchHistory)
+    constructor(historyManager: MatchHistory) 
     {
         this.game = new TicTacToeGame();
-        this.historyManager = historyManager;
-
+        this.historyManager = historyManager; 
+        const initialPlayerXConfig: PlayerConfig = { type: PlayerType.LLM };
+        const initialPlayerOConfig: PlayerConfig = { type: PlayerType.Human }; 
         this.state = {
             boardState: this.game.getBoardState(),
             gameState: this.game.getGameState(),
             nextPlayer: this.game.getNextPlayer(),
-            playerXConfig: { type: PlayerType.LLM }, // Default config
-            playerOConfig: { type: PlayerType.Human }, // Default config
-            apiKey: "",
-            isThinkingX: false,
-            isThinkingO: false,
-            errorX: null,
-            errorO: null,
-            chatHistoryX: [],
-            chatHistoryO: [],
-            statusMessage: this.generateStatusMessage(),
+            playerXConfig: initialPlayerXConfig,
+            playerOConfig: initialPlayerOConfig,
+            statusMessage: "",
+            error: null,
         };
-
-        this.llmControllerX = new LlmController();
-        this.llmControllerO = new LlmController();
-
-        this.configureAndSubscribeLlm(Player.X);
-        this.configureAndSubscribeLlm(Player.O);
-
-        this.triggerTurn();
+        this.state.statusMessage = this.generateStatusMessage();
     }
 
-    // --- State Management & Subscription ---
 
-    public getState(): Readonly<TicTacToeControllerState>
+    public getState(): Readonly<TicTacToeState>
     {
-        return this.state;
+        return { ...this.state, boardState: [...this.state.boardState] };
     }
 
-    public subscribe(listener: StateChangeListener): () => void
+    public subscribe(listener: TicTacToeStateChangeListener): () => void
     {
         this.listeners.push(listener);
         return () =>
@@ -94,163 +73,188 @@ export class TicTacToeController
 
     private notifyListeners(): void
     {
-        const stateSnapshot = { ...this.state };
+        const stateSnapshot = this.getState();
         this.listeners.forEach(listener => listener(stateSnapshot));
     }
 
-    private updateState(updates: Partial<TicTacToeControllerState>): void
+    private updateState(updates: Partial<TicTacToeState>): void
     {
+        const previousGameState = this.state.gameState; 
+        const wasUpdatingConfig = 'playerXConfig' in updates || 'playerOConfig' in updates;
         this.state = { ...this.state, ...updates };
-        this.state.statusMessage = this.generateStatusMessage();
+
+        if ('gameState' in updates || 'nextPlayer' in updates || wasUpdatingConfig || 'error' in updates)
+        {
+             this.state.statusMessage = this.generateStatusMessage();
+        }
         this.notifyListeners();
+
+        if (previousGameState === GameState.Ongoing && this.state.gameState !== GameState.Ongoing) {
+            this.recordMatch();
+        }
     }
 
-    public async setApiKey(key: string): Promise<void>
-    {
-        console.log("Controller: Setting API Key");
-        if (key === this.state.apiKey) return;
 
-        this.updateState({ apiKey: key });
-
-        await this.configureAndSubscribeLlm(Player.X);
-        await this.configureAndSubscribeLlm(Player.O);
-        this.triggerTurnIfLlm();
-    }
-
-    public async setPlayerConfig(player: Player.X | Player.O, config: PlayerConfig): Promise<void>
+    public setPlayerConfig(player: Player.X | Player.O, config: PlayerConfig): void
     {
         console.log(`Controller: Setting Player ${player === Player.X ? 'X' : 'O'} Config:`, config);
-        const currentState = this.getState();
-        const currentConfig = player === Player.X ? currentState.playerXConfig : currentState.playerOConfig;
-
-        // Avoid unnecessary updates if config hasn't changed
-        if (config.type === currentConfig.type && config.modelId === currentConfig.modelId)
-        {
-            return;
-        }
-
         if (player === Player.X)
         {
+            if (config.type === this.state.playerXConfig.type && config.modelId === this.state.playerXConfig.modelId) return;
             this.updateState({ playerXConfig: config });
-            await this.configureAndSubscribeLlm(Player.X);
         } else
         {
+            if (config.type === this.state.playerOConfig.type && config.modelId === this.state.playerOConfig.modelId) return;
             this.updateState({ playerOConfig: config });
-            await this.configureAndSubscribeLlm(Player.O);
-        }
-        this.triggerTurnIfLlm();
-    }
-
-    public handleSquareClick(index: number): void
-    {
-        console.log(`Controller: Handling square click ${index}`);
-        const currentPlayer = this.game.getNextPlayer();
-        const currentPlayerConfig = currentPlayer === Player.X ? this.state.playerXConfig : this.state.playerOConfig;
-
-        if (currentPlayerConfig.type === PlayerType.Human && this.game.getGameState() === GameState.Ongoing)
-        {
-            this.processHumanMove(index);
-        } else
-        {
-            console.warn("Controller: Click ignored - not a human player's turn or game over.");
         }
     }
 
-    public restartGame(): void
+    public makeMove(index: number): boolean
     {
-        console.log("Controller: Restarting game");
+        if (this.state.gameState !== GameState.Ongoing)
+        {
+            console.warn("Controller: Attempted move when game is not ongoing.");
+            this.updateState({ error: "Game is already over." });
+            return false;
+        }
+
+        try
+        {
+            this.game.makeMove(index);
+            this.updateState({
+                boardState: this.game.getBoardState(),
+                gameState: this.game.getGameState(),
+                nextPlayer: this.game.getNextPlayer(),
+                error: null,
+            });
+            return true;
+        }
+        catch (error: any)
+        {
+            console.error(`Controller: Invalid move attempt at index ${index}`, error);
+            this.updateState({ error: error.message || "Invalid move attempted." });
+            return false;
+        }
+    }
+
+    public resetGame(): void
+    {
+        console.log("Controller: Resetting game");
         this.game.resetGame();
-        this.llmControllerX.reset(true);
-        this.llmControllerO.reset(true);
         this.updateState({
             boardState: this.game.getBoardState(),
             gameState: this.game.getGameState(),
             nextPlayer: this.game.getNextPlayer(),
-            isThinkingX: false,
-            isThinkingO: false,
-            errorX: null,
-            errorO: null,
-            chatHistoryX: [],
-            chatHistoryO: [],
+            error: null,
         });
-        this.triggerTurn();
     }
 
-    private attemptMove(index: number, player: Player): void
+    private generateStatusMessage(): string
     {
-        try
-        {
-            this.game.makeMove(index);
-            const newGameState = this.game.getGameState();
-            this.updateState({
-                boardState: this.game.getBoardState(),
-                gameState: newGameState,
-                nextPlayer: this.game.getNextPlayer(),
-                errorX: player === Player.X ? null : this.state.errorX,
-                errorO: player === Player.O ? null : this.state.errorO,
-                isThinkingX: player === Player.X ? false : this.state.isThinkingX,
-                isThinkingO: player === Player.O ? false : this.state.isThinkingO,
-            });
+        const { gameState, nextPlayer, playerXConfig, playerOConfig, error } = this.state;
 
-            if (newGameState !== GameState.Ongoing)
-            {
-                this.recordMatch();
-            } else
-            {
-                this.triggerTurn();
-            }
-        }
-        catch (error: any)
-        {
-            console.error(`Controller: Invalid move by ${player === Player.X ? 'X' : 'O'}`, error);
-            if (player === Player.X)
-            {
-                this.updateState({ errorX: error.message || "Invalid move", isThinkingX: false });
-            } else
-            {
-                this.updateState({ errorO: error.message || "Invalid move", isThinkingO: false });
-            }
-        }
-    }
-
-    private triggerTurn(): void
-    {
-        const nextPlayer = this.game.getNextPlayer();
-        const gameState = this.game.getGameState();
-
-        if (gameState !== GameState.Ongoing)
-        {
-            return;
-        }
-
-        const nextPlayerConfig = nextPlayer === Player.X ? this.state.playerXConfig : this.state.playerOConfig;
-
-        if (nextPlayerConfig.type === PlayerType.LLM)
-        {
-            console.log(`Controller: Triggering LLM turn for Player ${nextPlayer === Player.X ? 'X' : 'O'}`);
-            this.requestLlmMove(nextPlayer);
-        } else
-        {
-            console.log(`Controller: Waiting for Human Player ${nextPlayer === Player.X ? 'X' : 'O'}'s move`);
-        }
-    }
-
-    private recordMatch(): void
-    {
-        const gameState = this.game.getGameState();
-        if (gameState === GameState.Ongoing) return;
-
-        const getPlayerName = (config: PlayerConfig): string =>
-        {
-            return config.type === PlayerType.LLM ? (config.modelId || `UnselectedLLM_${config === this.state.playerXConfig ? 'X' : 'O'}`) : PlayerType.Human;
-        };
-
-        const model1Name = getPlayerName(this.state.playerXConfig);
-        const model2Name = getPlayerName(this.state.playerOConfig);
-        let winnerName: string;
+        if (error) return `Game Error: ${error}`;
 
         switch (gameState)
         {
+            case GameState.Draw: return "Game over: Draw";
+            case GameState.XWins: return `Game over: X wins! (${playerXConfig.type})`;
+            case GameState.OWins: return `Game over: O wins! (${playerOConfig.type})`;
+            case GameState.Ongoing:
+            default:
+                const playerSymbol = nextPlayer === Player.X ? 'X' : 'O';
+                const turnPlayerConfig = nextPlayer === Player.X ? playerXConfig : playerOConfig;
+                if (turnPlayerConfig.type === PlayerType.LLM)
+                {
+                    return `LLM ${playerSymbol} is thinking...`;
+                }
+                else
+                {
+                    return `Game ongoing. ${turnPlayerConfig.type}'s turn (${playerSymbol}).`;
+                }
+        }
+    }
+
+    // --- LLM Interaction Helpers ---
+
+    public buildLlmPrompt(player: Player, lastLlmError: string | null): string
+    {
+        const rules = this.game.explainGame();
+        const moveFormat = this.game.explainNextMoveFormat();
+        const boardStatus = this.game.displayGameStatus();
+        const currentGameError = this.state.error;
+
+        let prompt = `You are Player ${player === Player.X ? 'X' : 'O'} in a game of Tic-Tac-Toe.\n\n`;
+        prompt += `Rules:\n${rules}\n\n`;
+        prompt += `Current Game State:\n${boardStatus}\n\n`;
+        prompt += `Move Format:\n${moveFormat}\n\n`;
+
+        if (lastLlmError) {
+              prompt += `Important: Your previous attempt resulted in an error: "${lastLlmError}". Please try again, ensuring you select a valid, empty square (1-9).\n\n`;
+        } else if (currentGameError) {
+            prompt += `Important: The last move attempt resulted in a game error: "${currentGameError}". ${this.game.invalidMoveWarning(currentGameError)} Please choose a valid, empty square.\n\n`; // Fixed dot
+        }
+
+        prompt += `Based on the current board and rules, what is your next move? Please respond with only the number of the square (1-9) you choose.`;
+        return prompt;
+    }
+
+    public attemptLlmMove(llmResponse: string): boolean
+    {
+        const moveIndex = this.parseLlmMove(llmResponse);
+
+        if (moveIndex === null)
+        {
+            const parseError = `Could not parse a valid move (1-9) from LLM response: "${llmResponse}"`;
+            console.error(`Controller: ${parseError}`);
+            this.updateState({ error: parseError }); // Update state triggers status/notification
+            return false;
+        }
+
+        console.log(`Controller: Parsed LLM move: ${moveIndex + 1}`);
+        return this.makeMove(moveIndex);
+    }
+
+    private parseLlmMove(responseText: string): number | null
+    {
+        const matches = responseText.match(/\b([1-9])\b/g);
+        if (matches && matches.length > 0)
+        {
+            const lastNumberStr = matches[matches.length - 1];
+            const move = parseInt(lastNumberStr, 10);
+            if (!isNaN(move) && move >= 1 && move <= 9)
+            {
+                return move - 1;
+            }
+        }
+         const singleDigitMatch = responseText.trim().match(/^([1-9])$/);
+          if (singleDigitMatch) {
+              const move = parseInt(singleDigitMatch[1], 10);
+              if (!isNaN(move)) {
+                  return move - 1;
+              }
+          }
+        return null;
+    }
+
+
+    private recordMatch(): void
+    {
+        const { gameState, playerXConfig, playerOConfig } = this.state;
+        if (gameState === GameState.Ongoing) {
+             console.warn("Controller: recordMatch called while game is ongoing.");
+             return;
+        }
+
+        const getPlayerName = (config: PlayerConfig): string => {
+            return config.type === PlayerType.LLM ? (config.modelId || `LLM_${config === playerXConfig ? 'X' : 'O'}`) : PlayerType.Human;
+        };
+
+        const model1Name = getPlayerName(playerXConfig);
+        const model2Name = getPlayerName(playerOConfig);
+        let winnerName: string;
+
+        switch (gameState) {
             case GameState.XWins: winnerName = model1Name; break;
             case GameState.OWins: winnerName = model2Name; break;
             case GameState.Draw:
@@ -264,193 +268,10 @@ export class TicTacToeController
             winner: winnerName,
         };
 
+        console.log("Controller: Recording match:", matchData);
         this.historyManager.addMatch(matchData)
-            .then(() => console.log("Controller: Match recorded successfully", matchData))
+            .then(() => console.log("Controller: Match recorded successfully"))
             .catch(error => console.error("Controller: Failed to record match history:", error));
-    }
-
-    private generateStatusMessage(): string
-    {
-        const { gameState, nextPlayer, playerXConfig, playerOConfig, isThinkingX, isThinkingO, errorX, errorO } = this.state;
-
-        if (errorX) return `Player X Error: ${errorX}`;
-        if (errorO) return `Player O Error: ${errorO}`;
-        if (isThinkingX) return "LLM X is thinking...";
-        if (isThinkingO) return "LLM O is thinking...";
-
-        switch (gameState)
-        {
-            case GameState.Draw: return "Game over: Draw";
-            case GameState.XWins: return `Game over: X wins! (${this.state.playerXConfig.type})`;
-            case GameState.OWins: return `Game over: O wins! (${this.state.playerOConfig.type})`;
-            case GameState.Ongoing:
-            default:
-                const playerSymbol = nextPlayer === Player.X ? 'X' : 'O';
-                const turnPlayerConfig = nextPlayer === Player.X ? playerXConfig : playerOConfig;
-                return `Game ongoing. ${turnPlayerConfig.type}'s turn (${playerSymbol}).`;
-        }
-    }
-
-    private processHumanMove = (index: number): void =>
-    {
-        console.log("Controller: Received move from Human Handler:", index);
-        this.attemptMove(index, this.game.getNextPlayer());
-    };
-
-    private handleLlmStateUpdate = (player: Player, llmState: LlmControllerState): void =>
-    {
-        console.log(`Controller: Received state update from LLM Controller (${player === Player.X ? 'X' : 'O'}):`, llmState);
-        if (player === Player.X)
-        {
-            this.updateState({
-                isThinkingX: llmState.isThinking,
-                errorX: llmState.error,
-                chatHistoryX: llmState.chatHistory,
-            });
-        } else
-        {
-            this.updateState({
-                isThinkingO: llmState.isThinking,
-                errorO: llmState.error,
-                chatHistoryO: llmState.chatHistory,
-            });
-        }
-    };
-
-    private async configureAndSubscribeLlm(player: Player): Promise<void>
-    {
-        const config = player === Player.X ? this.state.playerXConfig : this.state.playerOConfig;
-        const controller = player === Player.X ? this.llmControllerX : this.llmControllerO;
-        const unsubscribeVar = player === Player.X ? 'llmUnsubscribeX' : 'llmUnsubscribeO';
-
-        const currentUnsubscribe = this[unsubscribeVar];
-        if (currentUnsubscribe)
-        {
-            currentUnsubscribe();
-            this[unsubscribeVar] = null;
-        }
-
-        // Reset LLM state for the player if they are not LLM or lack config
-        if (config.type !== PlayerType.LLM || !config.modelId || !this.state.apiKey)
-        {
-            controller.reset(true); // Keep API key if present, but clear history/errors
-            if (player === Player.X) this.updateState({ isThinkingX: false, errorX: null, chatHistoryX: [] });
-            else this.updateState({ isThinkingO: false, errorO: null, chatHistoryO: [] });
-
-            if (config.type === PlayerType.LLM)
-            {
-                 const errorMsg = `LLM ${player === Player.X ? 'X' : 'O'} requires API Key and Model ID`;
-                 this.updateState(player === Player.X ? { errorX: errorMsg } : { errorO: errorMsg });
-            }
-            return; // No need to configure or subscribe
-        }
-
-        // Configure and subscribe if LLM, model, and API key are set
-        try
-        {
-                const configured = await controller.configure(this.state.apiKey, config.modelId);
-                if (configured)
-                {
-                    this[unsubscribeVar] = controller.subscribe((newState) => this.handleLlmStateUpdate(player, newState));
-                    this.handleLlmStateUpdate(player, controller.getState()); // Update state immediately after subscribing
-                } else
-                {
-                    const errorMsg = `LLM ${player === Player.X ? 'X' : 'O'} configuration failed`;
-                    this.updateState(player === Player.X ? { errorX: errorMsg } : { errorO: errorMsg });
-                }
-            } catch (error: any)
-            {
-                const errorMsg = `LLM ${player === Player.X ? 'X' : 'O'} config error: ${error.message}`;
-                this.updateState(player === Player.X ? { errorX: errorMsg } : { errorO: errorMsg });
-            }
-    }
-
-    private triggerTurnIfLlm(): void
-    {
-        const nextPlayer = this.game.getNextPlayer();
-        const config = nextPlayer === Player.X ? this.state.playerXConfig : this.state.playerOConfig;
-        if (this.game.getGameState() === GameState.Ongoing && config.type === PlayerType.LLM)
-        {
-            this.triggerTurn();
-        }
-    }
-
-    private async requestLlmMove(player: Player): Promise<void>
-    {
-        const controller = player === Player.X ? this.llmControllerX : this.llmControllerO;
-        const config = player === Player.X ? this.state.playerXConfig : this.state.playerOConfig;
-        const playerSymbol = player === Player.X ? 'X' : 'O';
-
-        if (config.type !== PlayerType.LLM)
-        {
-            console.warn(`Attempted to request LLM move for Player ${playerSymbol}, but they are configured as Human.`);
-            return;
-        }
-
-        if (!controller || !config.modelId || !this.state.apiKey)
-        {
-            console.error(`LLM Controller for Player ${playerSymbol} not ready or not configured.`);
-            this.updateState(player === Player.X ? { errorX: "LLM not ready", isThinkingX: false } : { errorO: "LLM not ready", isThinkingO: false });
-            return;
-        }
-
-        if (player === Player.X && this.state.isThinkingX) return;
-        if (player === Player.O && this.state.isThinkingO) return;
-
-
-        try
-        {
-            const prompt = this.buildLlmPrompt(player);
-            const responseText = await controller.generateResponse(prompt);
-            const moveIndex = this.parseLlmMove(responseText);
-
-            if (moveIndex === null)
-            {
-                throw new Error("LLM response did not contain a valid move (1-9).");
-            }
-
-            console.log(`Controller: LLM ${player === Player.X ? 'X' : 'O'} proposed move: ${moveIndex + 1}`);
-            this.attemptMove(moveIndex, player);
-
-        } catch (error: any)
-        {
-            console.error(`Controller: Error getting move from LLM ${player === Player.X ? 'X' : 'O'}:`, error);
-        }
-    }
-
-    private buildLlmPrompt(player: Player): string
-    {
-        const rules = this.game.explainGame();
-        const moveFormat = this.game.explainNextMoveFormat();
-        const boardStatus = this.game.displayGameStatus();
-
-        let prompt = `You are Player ${player === Player.X ? 'X' : 'O'} in a game of Tic-Tac-Toe.\n\n`;
-        prompt += `Rules:\n${rules}\n\n`;
-        prompt += `Current Game State:\n${boardStatus}\n\n`;
-        prompt += `Move Format:\n${moveFormat}\n\n`;
-
-        const lastError = player === Player.X ? this.state.errorX : this.state.errorO;
-        if (lastError && lastError.includes("Invalid move")) {
-             prompt += `Important: Your previous attempt resulted in an error: "${lastError}". ${this.game.invalidMoveWarning(lastError)} Please choose a valid, empty square.\n\n`;
-        }
-
-        prompt += `Based on the current board and rules, what is your next move? Please respond with only the number of the square (1-9) you choose.`;
-        return prompt;
-    }
-
-    private parseLlmMove(responseText: string): number | null
-    {
-        const matches = responseText.match(/\b([1-9])\b/g);
-        if (matches && matches.length > 0)
-        {
-            const lastNumberStr = matches[matches.length - 1];
-            const move = parseInt(lastNumberStr, 10);
-            if (!isNaN(move) && move >= 1 && move <= 9)
-            {
-                return move - 1; // Convert 1-9 to 0-8 index
-            }
-        }
-        return null;
     }
 
 }

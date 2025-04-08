@@ -27,7 +27,23 @@
     width: 320px; /* Fixed width for side columns */
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    align-items: center; /* Center items horizontally */
+}
+
+/* Basic styling for the central restart button */
+.restartButton {
+    margin-top: 1rem; /* Add some space above the button */
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    cursor: pointer;
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.restartButton:hover {
+    background-color: #e0e0e0;
 }
 
 .centerColumn

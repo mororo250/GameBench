@@ -2,8 +2,7 @@ import React, {ReactElement} from 'react';
 import {BoardState, getPlayerSymbol, SquareValue} from '../../lib/TicTacToe';
 import gameStyles from './Game.module.css';
 
-// Square component - Disable button when not human's turn or game over
-export function Square({value, onSquareClick, disabled}: {
+function Square({value, onSquareClick, disabled}: {
     value: SquareValue, onSquareClick: () => void, disabled: boolean
 }): ReactElement
 {
@@ -12,7 +11,6 @@ export function Square({value, onSquareClick, disabled}: {
         </button>);
 }
 
-// Board component
 export function Board({squares, onSquareClick, disabled}: {
     squares: Readonly<BoardState>, onSquareClick: (index: number) => void, disabled: boolean
 }): ReactElement

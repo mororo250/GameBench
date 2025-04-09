@@ -1,72 +1,50 @@
 "use client";
 
-import React, { ReactElement, useMemo, useState, useCallback } from "react";
-import Game from "../components/game/TicTacToeGame";
-import HistoryTable from "../components/history/HistoryTable";
-import { MatchHistory } from "../lib/matchHistory";
-import { TicTacToeController } from "../controller/TicTacToeController";
-import { LlmController } from "../controller/LlmController";
-import { Player } from "../lib/TicTacToe";
-import { ApiKeyInput } from "../components/shared/ApiKeyInput";
-import { PlayerPanel } from "../components/player/PlayerPanel";
-import layoutStyles from "../components/shared/Layout.module.css";
+import React, { ReactElement } from "react";
+import Layout from "../components/layout/Layout";
+import layoutStyles from "../components/shared/Layout.module.css"; 
+import Link from "next/link";
 
-export default function Page(): ReactElement
+export default function HomePage(): ReactElement
 {
-    const historyManager = useMemo(() => new MatchHistory(), []);
-    const ticTacToeController = useMemo(() => new TicTacToeController(historyManager), [historyManager]);
-    const llmControllerX = useMemo(() => new LlmController(), []);
-    const llmControllerO = useMemo(() => new LlmController(), []);
-
-    const [apiKey, setApiKey] = useState<string>("");
-
-    // Handler to set API Key. PlayerPanel components will react via useEffect.
-    const setApiKeyHandler = useCallback((key: string) =>
-    {
-        setApiKey(key);
-    }, []);
-
-    const handleRestart = useCallback(() => {
-        ticTacToeController.resetGame();
-        llmControllerX.reset(true);
-        llmControllerO.reset(true);
-    }, [ticTacToeController, llmControllerX, llmControllerO]);
-
     return (
-        <React.StrictMode>
-            <div className={layoutStyles.page}>
-                <h1>Tic Tac Toe</h1>
-                <ApiKeyInput apiKey={apiKey} setApiKey={setApiKeyHandler} />
+        <Layout>
+            <div className={layoutStyles.pageContent}>
+                <h1>GameBench</h1>
+                <h2>Evaluating LLMs Through Gameplay</h2>
 
-                <div className={layoutStyles.gameLayout}>
+                <p>
+                    Welcome to GameBench, a platform designed to evaluate the reasoning and strategic capabilities
+                    of Large Language Models (LLMs) through classic games. Currently, we feature Tic Tac Toe,
+                    a seemingly simple game that requires foresight and tactical thinking.
+                </p>
 
-                    <PlayerPanel
-                        playerRole={Player.X}
-                        ticTacToeController={ticTacToeController}
-                        llmController={llmControllerX}
-                        apiKey={apiKey}
-                    />
+                <h3>Why Games?</h3>
+                <p>
+                    While LLMs excel at processing vast amounts of text data and generating human-like responses,
+                    their ability to reason strategically in dynamic environments is an active area of research.
+                    Games provide a controlled environment to test these capabilities. Tic Tac Toe, despite its simplicity,
+                    involves:
+                </p>
+                <ul>
+                    <li><strong>Strategic Planning:</strong> Anticipating opponent moves and planning counter-moves.</li>
+                    <li><strong>Rule Adherence:</strong> Understanding and following the game's constraints.</li>
+                    <li><strong>Goal Orientation:</strong> Working towards the objective of winning or forcing a draw.</li>
+                </ul>
 
-                    <div className={layoutStyles.centerColumn}>
-                        <Game
-                            ticTacToeController={ticTacToeController}
-                        />
-                    </div>
+                <h3>How it Works</h3>
+                <p>
+                    You can play against various LLMs or have them play against each other. The platform interacts
+                    with LLM APIs (currently via OpenRouter), sending the current game state and requesting the next move.
+                    The history of moves and outcomes is recorded, allowing for analysis of model performance.
+                </p>
+                <p>
+                    Navigate to the <Link href="/game">TicTacToe Game</Link> tab to start playing, or view past results in the <Link href="/history">History</Link> tab.
+                </p>
 
-                    <PlayerPanel
-                        playerRole={Player.O}
-                        ticTacToeController={ticTacToeController}
-                        llmController={llmControllerO}
-                        apiKey={apiKey}
-                    />
-                </div>
+                {/* Todo: Add leaderboard here */}
 
-                <button onClick={handleRestart} className={layoutStyles.restartButton}>
-                    Restart Game
-                </button>
-
-                <HistoryTable historyManager={historyManager} />
             </div>
-        </React.StrictMode>
+        </Layout>
     );
 }

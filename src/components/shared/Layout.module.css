@@ -53,3 +53,41 @@
     align-items: center; /* Center board and status */
     flex-grow: 1;
 }
+
+/* Top Navigation Bar Styles */
+.topNav
+{
+    width: 100%;
+    background-color: #f8f8f8; /* Light background for the nav */
+    border-bottom: 1px solid #e7e7e7; /* Subtle border */
+    padding: 10px 20px; /* Padding around the nav */
+    margin-bottom: 20px; /* Space below the nav */
+}
+
+.topNav ul
+{
+    list-style: none; /* Remove default bullet points */
+    padding: 0;
+    margin: 0;
+    display: flex; /* Arrange items horizontally */
+    gap: 20px; /* Space between nav items */
+    justify-content: center; /* Center nav items */
+}
+
+.topNav li
+{
+    display: inline; /* Keep items inline */
+}
+
+.topNav a
+{
+    text-decoration: none; /* Remove underline from links */
+    color: #337ab7; /* Link color */
+    font-weight: bold;
+}
+
+.topNav a:hover
+{
+    color: #23527c; /* Darker color on hover */
+    text-decoration: underline;
+}

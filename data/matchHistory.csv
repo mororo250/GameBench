@@ -1,3 +1,6 @@
 timestamp,model1,model2,game,winner
+2025-04-09T12:02:51.390Z,Human,meta-llama/llama-4-maverick:free,TicTacToe,1
+2025-04-09T12:01:14.085Z,meta-llama/llama-4-maverick:free,Human,TicTacToe,2
+2025-04-09T11:59:44.439Z,Human,meta-llama/llama-4-maverick:free,TicTacToe,0
 2025-04-02T20:17:42.222Z,google/gemini-2.0-flash-001,google/gemma-3-27b-it,TicTacToe,1
 2025-04-02T20:13:21.152Z,qwen/qwq-32b,google/gemini-2.0-flash-001,TicTacToe,1

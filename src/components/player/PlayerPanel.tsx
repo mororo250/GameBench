@@ -79,9 +79,10 @@ export function PlayerPanel({
             llmController.configure(apiKey, config.modelId);
         } else if (config.type !== PlayerType.LLM)
         {
-            llmController.reset(true);
+            llmController.resetChat();
+            llmController.resetConfig
         } else if (!apiKey && config.type === PlayerType.LLM) {
-             llmController.reset(false);
+             llmController.resetChat();
         }
     }, [apiKey, playerRole, ticTacToeState.playerXConfig, ticTacToeState.playerOConfig, llmController]);
 

@@ -151,9 +151,8 @@ export class LlmController
         }
     }
 
-    public reset(keepConfig: boolean = true): void
+    public resetChat(): void
     {
-        console.log("LLM Controller: Resetting state.");
         this.updateState({
             isThinking: false,
             error: null,
@@ -161,12 +160,12 @@ export class LlmController
         });
 
         this.openRouterClient?.clearState();
+    }
 
-        if (!keepConfig)
-        {
-            this.apiKey = "";
-            this.modelId = "";
-            this.openRouterClient = null;
-        }
+    public resetConfig(): void
+    {
+        this.apiKey = "";
+        this.modelId = "";
+        this.openRouterClient = null;
     }
 }

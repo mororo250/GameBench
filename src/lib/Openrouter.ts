@@ -75,15 +75,6 @@ export class OpenRouterClient
     }
 
     /**
-     * Gets the name of the currently initialized model.
-     * @returns The model name string, or null if no model is initialized.
-     */
-    getModelName(): string | null
-    {
-        return this.modelInfo?.name ?? null;
-    }
-
-    /**
      * @param modelId - The identifier of the model to use (e.g., "openai/gpt-4o").
      * @returns True if the model was set successfully, false otherwise.
      */

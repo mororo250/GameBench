@@ -130,7 +130,7 @@ export class MatchHistory
             if (!response.ok)
             {
                  const errorData = await response.json().catch(() => ({}));
-                throw new Error(`Failed to add match: ${response.status} ${response.statusText} - ${errorData.message || 'Unknown API error'}`);
+                 throw new Error(`Failed to add match: ${response.status} ${response.statusText} - ${errorData.message || 'Unknown API error'}`);
             }
 
             console.log("Match added successfully via API.");

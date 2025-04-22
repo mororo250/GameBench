@@ -69,7 +69,10 @@ export class TicTacToeGame
      */
     public explainGame(): string
     {
-        return "Tic-Tac-Toe is a two-player game. Player X and Player O take turns marking spaces in a 3x3 grid. The player who succeeds in placing three of their marks in a horizontal, vertical, or diagonal row wins the game. If all 9 squares are filled and no player has won, the game is a draw.";
+        return "Tic-Tac-Toe is a two-player game.\n" +
+            "Player X and Player O take turns marking spaces in a 3x3 grid.\n" +
+            "The player who succeeds in placing three of their marks in a horizontal, vertical, or diagonal row wins the game.\n" +
+            "If all 9 squares are filled and no player has won, the game is a draw.";
     }
 
     /**
@@ -78,7 +81,14 @@ export class TicTacToeGame
      */
     public explainNextMoveFormat(): string
     {
-        return "To make a move, specify the number of the square you want to play (1-9). The squares are numbered from left-to-right, top-to-bottom:\n 1 | 2 | 3 \n-----------\n 4 | 5 | 6 \n-----------\n 7 | 8 | 9 \n. The number must be the last thing written in your answer";
+        return "To make a move, specify the number of the square you want to play (1-9).\n" +
+            "The squares are numbered from left-to-right, top-to-bottom:\n" +
+            " 1 | 2 | 3 \n" +
+            "-----------\n" +
+            " 4 | 5 | 6 \n" +
+            "-----------\n" +
+            " 7 | 8 | 9 \n" +
+            "The number must be the last thing written in your answer";
     }
 
     /**

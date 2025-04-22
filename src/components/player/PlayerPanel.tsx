@@ -1,7 +1,7 @@
 import React, { ReactElement, useState, useEffect, useCallback } from "react";
 import { Player, GameState, getPlayerSymbol } from "../../lib/TicTacToe";
-import { TicTacToeController, TicTacToeState, PlayerConfig, PlayerType } from "../../controller/TicTacToeController";
-import { LlmController, LlmControllerState, ChatMessage } from "../../controller/LlmController";
+import { TicTacToeController, TicTacToeState, PlayerType } from "../../controller/TicTacToeController";
+import { LlmController, LlmControllerState } from "../../controller/LlmController";
 import { ModelSelector } from "../shared/ModelSelector";
 import { LlmChat } from "./LlmChat";
 import { OpponentSelection } from "./OpponentSelection";
@@ -61,7 +61,7 @@ export function PlayerPanel({
     const handleSetType = useCallback((type: PlayerType) =>
     {
         ticTacToeController.setPlayerConfig(playerRole, { ...playerConfig, type });
-    }, [ticTacToeController, playerRole, playerConfig]);
+    }, [ticTacToeController, playerRole]);
 
     const handleSetModel = useCallback((modelId: string) =>
     {

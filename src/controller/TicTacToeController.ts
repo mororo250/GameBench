@@ -176,7 +176,6 @@ export class TicTacToeController
     }
 
     // --- LLM Interaction Helpers ---
-
     public buildLlmPrompt(player: Player, lastLlmError: string | null): string
     {
         const rules = this.game.explainGame();

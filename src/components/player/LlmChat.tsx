@@ -54,7 +54,6 @@ export function LlmChat({ messages }: LlmChatProps): ReactElement
                         </div>
                     </div>
                 ))}
-                {/* Keep the ref for potential future use, but don't scroll automatically */}
                 <div ref={chatEndRef} />
             </div>
         </div>
